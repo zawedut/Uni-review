@@ -73,7 +73,7 @@ export default function ManageDepartments({ params }: { params: Promise<{ id: st
     }
 
     return (
-        <div className="container mx-auto py-10 max-w-4xl">
+        <div className="container mx-auto py-10 pt-24 max-w-4xl px-4">
             <Button variant="ghost" className="mb-4 pl-0" onClick={() => router.back()}>
                 <ChevronLeft className="w-4 h-4 mr-1" /> ย้อนกลับไปหน้าคณะ
             </Button>

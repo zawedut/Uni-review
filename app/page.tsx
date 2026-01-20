@@ -3,12 +3,10 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, MapPin, GraduationCap, ShieldCheck } from 'lucide-react'
+import { Search, GraduationCap, ChevronRight, Sparkles, Building2, Star, TrendingUp } from 'lucide-react'
 
-// Type สำหรับข้อมูลมหาลัย
 interface University {
   id: string
   name_th: string
@@ -18,134 +16,267 @@ interface University {
 
 export default function Home() {
   const [universities, setUniversities] = useState<University[]>([])
+  const [stats, setStats] = useState({ faculties: 0, programs: 0 })
+  const [uniStats, setUniStats] = useState<Record<string, { rating: number, count: number }>>({})
   const [search, setSearch] = useState('')
-  const [user, setUser] = useState<any>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  // 1. โหลดข้อมูล User และ รายชื่อมหาลัย
   useEffect(() => {
     const fetchData = async () => {
-      // เช็ค User
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      // ถ้ามี User ให้เช็คว่าเป็น Admin ไหม
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-        if (profile?.role === 'admin') setIsAdmin(true)
-      }
-
-      // ดึงข้อมูลมหาลัยทั้งหมด
+      setLoading(true)
+      // Fetch Universities
       const { data: unis } = await supabase
         .from('universities')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('name_th')
 
       if (unis) setUniversities(unis)
+
+      // Fetch Stats Counts
+      const [facs, progs] = await Promise.all([
+        supabase.from('faculties').select('id', { count: 'exact', head: true }),
+        supabase.from('programs').select('id', { count: 'exact', head: true })
+      ])
+
+      setStats({
+        faculties: facs.count || 0,
+        programs: progs.count || 0
+      })
+
+      // Fetch Reviews for rating calculation
+      // Note: In a real large production app, this should be done via a database view or RPC
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select(`
+          rating_academic,
+          rating_social,
+          rating_facility,
+          programs (
+            departments (
+              faculties (
+                university_id
+              )
+            )
+          )
+        `)
+
+      if (reviews) {
+        const statsMap: Record<string, { total: number, count: number }> = {}
+
+        reviews.forEach((r: any) => {
+          const uniId = r.programs?.departments?.faculties?.university_id
+          if (uniId) {
+            if (!statsMap[uniId]) statsMap[uniId] = { total: 0, count: 0 }
+
+            const avgReview = (r.rating_academic + r.rating_social + r.rating_facility) / 3
+            statsMap[uniId].total += avgReview
+            statsMap[uniId].count += 1
+          }
+        })
+
+        const finalStats: Record<string, { rating: number, count: number }> = {}
+        Object.keys(statsMap).forEach(uniId => {
+          finalStats[uniId] = {
+            rating: Number((statsMap[uniId].total / statsMap[uniId].count).toFixed(1)),
+            count: statsMap[uniId].count
+          }
+        })
+        setUniStats(finalStats)
+      }
+
+      setLoading(false)
     }
     fetchData()
   }, [])
 
-  // 2. ระบบค้นหา (Filter)
   const filteredUnis = universities.filter(uni =>
     uni.name_th.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* --- Navbar --- */}
-      <nav className="bg-white border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-2 font-bold text-xl text-indigo-600">
-            <GraduationCap /> UniReview
-          </div>
-          <div className="flex gap-3">
-            {isAdmin && (
-              <Link href="/admin">
-                <Button variant="ghost">👑 ระบบหลังบ้าน</Button>
-              </Link>
-            )}
-            {user ? (
-              <div className="flex items-center gap-2">
-                <img src={user.user_metadata.avatar_url} className="w-8 h-8 rounded-full border" alt="Profile" />
-                <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut().then(() => window.location.reload())}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <Link href="/login">
-                <Button>เข้าสู่ระบบ</Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      {/* --- Hero Section --- */}
-      <div className="bg-indigo-600 text-white py-20 px-4">
-        <div className="container mx-auto text-center space-y-6">
-          <h1 className="text-4xl md:text-6xl font-bold">รีวิวมหาวิทยาลัยที่ "จริงใจ" 💖</h1>
-          <p className="text-indigo-100 text-lg md:text-xl max-w-2xl mx-auto">
-            ค้นหาข้อมูล รีวิวจากรุ่นพี่ และเปรียบเทียบหลักสูตร เพื่ออนาคตที่ดีที่สุดของคุณ
-          </p>
-
-          {/* ช่องค้นหาใหญ่ๆ */}
-          <div className="max-w-xl mx-auto relative text-slate-900">
-            <Search className="absolute left-3 top-3.5 text-gray-400 w-5 h-5" />
-            <Input
-              className="pl-10 h-12 text-lg rounded-full shadow-lg border-0"
-              placeholder="ค้นหาชื่อมหาวิทยาลัย..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* --- University Grid --- */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="flex items-center gap-2 mb-8">
-          <ShieldCheck className="text-indigo-600" />
-          <h2 className="text-2xl font-bold">มหาวิทยาลัยยอดนิยม</h2>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      {/* Hero Section */}
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-orange-400/20 rounded-full blur-3xl" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredUnis.map((uni) => (
-            <Link href={`/university/${uni.id}`} key={uni.id} className="group">
-              <Card className="h-full hover:shadow-xl transition-all hover:-translate-y-1 border-indigo-50 overflow-hidden">
-                <div className="h-32 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center">
-                  {/* ถ้ามี Logo ให้โชว์ ถ้าไม่มีให้โชว์ไอคอน */}
-                  {uni.logo_url ? (
-                    <img src={uni.logo_url} alt={uni.name_th} className="h-20 object-contain" />
-                  ) : (
-                    <GraduationCap className="w-16 h-16 text-slate-300" />
-                  )}
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-3xl mx-auto text-center">
+
+            <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 leading-tight">
+              ค้นหา<span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">มหาวิทยาลัย</span>ที่ใช่
+              <br />สำหรับคุณ
+            </h1>
+            <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
+              อ่านรีวิวจากนักศึกษาจริง เปรียบเทียบคณะและหลักสูตร ตัดสินใจได้อย่างมั่นใจ
+            </p>
+
+            {/* Search Box */}
+            <div className="relative max-w-xl mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-20" />
+              <div className="relative bg-white rounded-2xl shadow-2xl p-2">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+                  <Input
+                    className="pl-14 h-14 text-lg border-0 shadow-none focus-visible:ring-0 bg-transparent"
+                    placeholder="ค้นหาชื่อมหาวิทยาลัย..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
                 </div>
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${uni.type === 'Public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
-                      {uni.type === 'Public' ? 'รัฐบาล' : 'เอกชน'}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold group-hover:text-indigo-600 transition-colors">
-                    {uni.name_th}
-                  </h3>
-                  <div className="flex items-center gap-1 text-gray-500 text-sm mt-2">
-                    <MapPin className="w-4 h-4" /> ดูคณะและสาขา
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+              </div>
+            </div>
 
-          {filteredUnis.length === 0 && (
-            <div className="col-span-full text-center py-20 text-gray-400">
-              ไม่พบมหาวิทยาลัยที่คุณค้นหา...
+            {/* Quick Stats */}
+            <div className="flex flex-wrap justify-center gap-8 mt-12">
+              <div className="text-center">
+                <div className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {universities.length}
+                </div>
+                <div className="text-sm text-slate-500 font-medium">มหาวิทยาลัย</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black bg-gradient-to-r from-pink-600 to-orange-600 bg-clip-text text-transparent">
+                  {stats.faculties}
+                </div>
+                <div className="text-sm text-slate-500 font-medium">คณะ</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-black bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+                  {stats.programs}
+                </div>
+                <div className="text-sm text-slate-500 font-medium">หลักสูตร</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* University List */}
+      <section className="py-12 md:py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 flex items-center gap-3">
+                <Building2 className="w-8 h-8 text-blue-600" />
+                มหาวิทยาลัยทั้งหมด
+              </h2>
+              <p className="text-slate-500">เลือกดูรายละเอียดและรีวิวของแต่ละมหาวิทยาลัย</p>
+            </div>
+            <span className="px-4 py-2 rounded-full bg-white shadow-md text-sm font-bold text-blue-600">
+              {filteredUnis.length} แห่ง
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-40 bg-white/50 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredUnis.map((uni) => (
+                <Link href={`/university/${uni.id}`} key={uni.id}>
+                  <Card className="group h-full hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm overflow-hidden hover:-translate-y-1">
+                    {/* Gradient Border Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                    <CardContent className="p-6 relative">
+                      <div className="flex items-start gap-5">
+                        {/* Logo */}
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shrink-0 shadow-inner group-hover:shadow-lg transition-shadow">
+                          {uni.logo_url ? (
+                            <img src={uni.logo_url} alt="" className="w-14 h-14 object-contain" />
+                          ) : (
+                            <GraduationCap className="w-10 h-10 text-slate-400" />
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-lg text-slate-900 group-hover:text-blue-600 transition-colors mb-2 leading-tight">
+                            {uni.name_th}
+                          </h3>
+                          <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-semibold ${uni.type === 'Public'
+                            ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200/50'
+                            : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border border-purple-200/50'
+                            }`}>
+                            {uni.type === 'Public' ? '🏛️ รัฐบาล' : '🏢 เอกชน'}
+                          </span>
+
+                          {/* Preview Stats */}
+                          <div className="flex items-center gap-3 mt-3 text-xs text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Star className={`w-3.5 h-3.5 ${uniStats[uni.id] ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}`} />
+                              {uniStats[uni.id]?.rating || '0.0'}
+                            </span>
+                            <span>•</span>
+                            <span>{uniStats[uni.id]?.count || 0} รีวิว</span>
+                          </div>
+                        </div>
+
+                        <ChevronRight className="w-6 h-6 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all shrink-0" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredUnis.length === 0 && (
+            <div className="text-center py-20">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
+                <Search className="w-12 h-12 text-slate-300" />
+              </div>
+              <p className="text-slate-500 text-lg">ไม่พบมหาวิทยาลัยที่ค้นหา</p>
+              <p className="text-slate-400 text-sm mt-2">ลองค้นหาด้วยคำอื่น</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 md:py-24 bg-gradient-to-r from-blue-600 to-purple-600 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/10 rounded-full blur-3xl" />
+        </div>
+        <div className="container mx-auto px-4 text-center relative">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            พร้อมแชร์ประสบการณ์ของคุณหรือยัง?
+          </h2>
+          <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
+            รีวิวของคุณจะช่วยให้น้องๆ ตัดสินใจเลือกมหาวิทยาลัยได้ดีขึ้น
+          </p>
+          <Link href="/login">
+            <button className="px-8 py-4 rounded-full bg-white text-blue-600 font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300">
+              🚀 เริ่มเขียนรีวิว
+            </button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-white border-t border-slate-100">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <span className="font-bold text-xl text-slate-900">Mind Review</span>
+            </div>
+            <p className="text-sm text-slate-500">
+              © 2026 Mind Review - แพลตฟอร์มรีวิวมหาวิทยาลัยไทย
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
