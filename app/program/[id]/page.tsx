@@ -12,18 +12,18 @@ import Link from 'next/link'
 
 // Star Rating Input - Adjusted size to prevent overlap
 const StarInput = ({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) => (
-    <div className="flex flex-col items-center justify-center p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 transition-colors">
-        <label className="text-sm font-bold text-slate-700 mb-2 truncate w-full text-center">{label}</label>
-        <div className="flex items-center gap-1">
+    <div className="flex flex-col items-center justify-center p-2 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 transition-colors w-full">
+        <label className="text-sm font-bold text-slate-700 mb-1 truncate w-full text-center">{label}</label>
+        <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
                 <button
                     key={star}
                     type="button"
                     onClick={() => onChange(star)}
-                    className="focus:outline-none transition-transform active:scale-95 p-0.5"
+                    className="focus:outline-none transition-transform active:scale-95 p-1"
                 >
                     <Star
-                        className={`w-6 h-6 transition-colors duration-150 ${star <= value
+                        className={`w-5 h-5 transition-colors duration-150 ${star <= value
                             ? 'text-amber-400 fill-amber-400'
                             : 'text-slate-200 hover:text-amber-200'
                             }`}
@@ -31,9 +31,9 @@ const StarInput = ({ label, value, onChange }: { label: string, value: number, o
                 </button>
             ))}
         </div>
-        <div className="h-5 mt-2">
+        <div className="h-5 mt-1">
             {value > 0 ? (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md">
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
                     {value} คะแนน
                 </span>
             ) : (
