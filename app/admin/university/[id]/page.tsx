@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation' // ใช้ของ next/navigation นะ
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { ChevronLeft, Trash2 } from 'lucide-react' // ไอคอนสวย�
 export default function ManageFaculties({ params }: { params: Promise<{ id: string }> }) {
     const { id: universityId } = use(params) // ใช้ use() แกะ Promise ตาม Next.js 16
     const [uniName, setUniName] = useState('Loading...')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [faculties, setFaculties] = useState<any[]>([])
     const [newFaculty, setNewFaculty] = useState('')
     const [loading, setLoading] = useState(false)
@@ -18,27 +19,7 @@ export default function ManageFaculties({ params }: { params: Promise<{ id: stri
     const router = useRouter()
     const supabase = createClient()
 
-    // 1. โหลดข้อมูลเมื่อเข้าหน้าเว็บ
-    useEffect(() => {
-        if (!universityId) return // ถ้าไม่มี ID ไม่ต้องทำอะไร
-
-        const fetchData = async () => {
-            // ดึงชื่อมหาลัยมาโชว์หัวข้อ
-            const { data: uni } = await supabase
-                .from('universities')
-                .select('name_th')
-                .eq('id', universityId)
-                .single()
-
-            if (uni) setUniName(uni.name_th)
-
-            // ดึงรายการคณะที่มีอยู่แล้ว
-            fetchFaculties()
-        }
-        fetchData()
-    }, [universityId]) // dependency ต้องมี universityId
-
-    const fetchFaculties = async () => {
+    const fetchFaculties = useCallback(async () => {
         // 🛡️ กันไฟดูด: ถ้าไม่มี ID หรือ ID สั้นผิดปกติ ให้หยุดทันที ไม่ต้องยิงไป Supabase
         if (!universityId || universityId.length < 10) {
             console.warn("ยังไม่มี University ID หยุดการทำงาน")
@@ -58,7 +39,29 @@ export default function ManageFaculties({ params }: { params: Promise<{ id: stri
         } else {
             setFaculties(data || [])
         }
-    }
+    }, [universityId, supabase])
+
+    // 1. โหลดข้อมูลเมื่อเข้าหน้าเว็บ
+    useEffect(() => {
+        if (!universityId) return // ถ้าไม่มี ID ไม่ต้องทำอะไร
+
+        const fetchData = async () => {
+            // ดึงชื่อมหาลัยมาโชว์หัวข้อ
+            const { data: uni } = await supabase
+                .from('universities')
+                .select('name_th')
+                .eq('id', universityId)
+                .single()
+
+            if (uni) setUniName(uni.name_th)
+
+            // ดึงรายการคณะที่มีอยู่แล้ว
+            fetchFaculties()
+        }
+        fetchData()
+    }, [universityId, fetchFaculties, supabase]) // dependency ต้องมี universityId
+
+
 
     // 2. ฟังก์ชันเพิ่มคณะ
     const handleAdd = async (e: React.FormEvent) => {

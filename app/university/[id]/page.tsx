@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
-import { ChevronRight, Building2, BookOpen, GraduationCap, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Building2, BookOpen, ArrowLeft } from 'lucide-react'
 
 interface Department {
     id: string
@@ -19,6 +19,7 @@ interface Faculty {
 
 export default function UniversityPublicPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [uni, setUni] = useState<any>(null)
     const [faculties, setFaculties] = useState<Faculty[]>([])
     const [loading, setLoading] = useState(true)
@@ -35,10 +36,12 @@ export default function UniversityPublicPage({ params }: { params: Promise<{ id:
                 .eq('university_id', id)
                 .order('name_th')
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if (facData) setFaculties(facData as any)
             setLoading(false)
         }
         fetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id])
 
     if (loading) {
@@ -89,8 +92,8 @@ export default function UniversityPublicPage({ params }: { params: Promise<{ id:
                         </div>
                         <div>
                             <span className={`inline-block text-xs px-2 py-0.5 rounded mb-2 ${uni.type === 'Public'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-purple-100 text-purple-700'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-purple-100 text-purple-700'
                                 }`}>
                                 {uni.type === 'Public' ? 'มหาวิทยาลัยรัฐบาล' : 'มหาวิทยาลัยเอกชน'}
                             </span>

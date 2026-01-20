@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -11,12 +11,24 @@ import { ChevronLeft, Trash2 } from 'lucide-react'
 export default function ManageDepartments({ params }: { params: Promise<{ id: string }> }) {
     const { id: facultyId } = use(params) // ใช้ use() แกะ Promise
     const [facultyName, setFacultyName] = useState('Loading...')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [departments, setDepartments] = useState<any[]>([])
     const [newDept, setNewDept] = useState('')
     const [loading, setLoading] = useState(false)
 
     const router = useRouter()
     const supabase = createClient()
+
+    const fetchDepartments = useCallback(async () => {
+        const { data } = await supabase
+            .from('departments')
+            .select('*')
+            .eq('faculty_id', facultyId)
+            .order('created_at', { ascending: true })
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (data) setDepartments(data as any)
+    }, [facultyId, supabase])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -33,17 +45,9 @@ export default function ManageDepartments({ params }: { params: Promise<{ id: st
             fetchDepartments()
         }
         fetchData()
-    }, [facultyId])
+    }, [facultyId, supabase, fetchDepartments])
 
-    const fetchDepartments = async () => {
-        const { data } = await supabase
-            .from('departments')
-            .select('*')
-            .eq('faculty_id', facultyId)
-            .order('created_at', { ascending: true })
 
-        if (data) setDepartments(data)
-    }
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault()

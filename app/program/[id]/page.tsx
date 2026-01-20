@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from '@/components/ui/textarea'
-import { Star, GraduationCap, Building2, Users, UserCircle, ChevronRight, PenLine, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
+import { Star, GraduationCap, Building2, Users, ChevronRight, PenLine, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 
 // Star Rating Input - Adjusted size to prevent overlap
@@ -24,8 +24,8 @@ const StarInput = ({ label, value, onChange }: { label: string, value: number, o
                 >
                     <Star
                         className={`w-6 h-6 transition-colors duration-150 ${star <= value
-                                ? 'text-amber-400 fill-amber-400'
-                                : 'text-slate-200 hover:text-amber-200'
+                            ? 'text-amber-400 fill-amber-400'
+                            : 'text-slate-200 hover:text-amber-200'
                             }`}
                     />
                 </button>
@@ -44,6 +44,7 @@ const StarInput = ({ label, value, onChange }: { label: string, value: number, o
 )
 
 // Review Card Component with Like/Dislike
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReviewCard = ({ review }: { review: any }) => {
     const [likes, setLikes] = useState<number>(review.likes || 0)
     const [dislikes, setDislikes] = useState<number>(review.dislikes || 0)
@@ -96,7 +97,7 @@ const ReviewCard = ({ review }: { review: any }) => {
                 {/* Comment */}
                 {review.comment && (
                     <p className="text-slate-700 mb-4 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        "{review.comment}"
+                        &quot;{review.comment}&quot;
                     </p>
                 )}
 
@@ -146,8 +147,11 @@ const ReviewCard = ({ review }: { review: any }) => {
 
 export default function ProgramReviewPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [program, setProgram] = useState<any>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [reviews, setReviews] = useState<any[]>([])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [isOpen, setIsOpen] = useState(false)
@@ -157,24 +161,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
     const supabase = createClient()
     const router = useRouter()
 
-    useEffect(() => {
-        const init = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            setUser(user)
-
-            const { data: prog } = await supabase
-                .from('programs')
-                .select('*, departments(name_th, faculties(name_th, universities(name_th, id)))')
-                .eq('id', id)
-                .single()
-            setProgram(prog)
-
-            fetchReviews()
-        }
-        init()
-    }, [id])
-
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         // 1. Fetch reviews
         const { data: reviewsData, error } = await supabase
             .from('reviews')
@@ -197,6 +184,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                 .in('id', userIds)
 
             // 3. Map profiles to reviews
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const profilesMap: Record<string, any> = {}
             profilesData?.forEach(p => {
                 profilesMap[p.id] = p
@@ -212,7 +200,26 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
             setReviews([])
         }
         setLoading(false)
-    }
+    }, [id, supabase])
+
+    useEffect(() => {
+        const init = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setUser(user)
+
+            const { data: prog } = await supabase
+                .from('programs')
+                .select('*, departments(name_th, faculties(name_th, universities(name_th, id)))')
+                .eq('id', id)
+                .single()
+            setProgram(prog)
+
+            fetchReviews()
+        }
+        init()
+    }, [id, supabase, fetchReviews])
+
+
 
     const stats = reviews.reduce((acc, r) => ({
         academic: acc.academic + r.rating_academic,

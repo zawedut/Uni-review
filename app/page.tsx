@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, GraduationCap, ChevronRight, Sparkles, Building2, Star, TrendingUp } from 'lucide-react'
+import { Search, GraduationCap, ChevronRight, Building2, Star } from 'lucide-react'
 
 interface University {
   id: string
@@ -64,6 +64,7 @@ export default function Home() {
       if (reviews) {
         const statsMap: Record<string, { total: number, count: number }> = {}
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         reviews.forEach((r: any) => {
           const uniId = r.programs?.departments?.faculties?.university_id
           if (uniId) {
@@ -88,6 +89,7 @@ export default function Home() {
       setLoading(false)
     }
     fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filteredUnis = universities.filter(uni =>

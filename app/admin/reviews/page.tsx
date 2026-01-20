@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { MessageSquare, Trash2, ArrowLeft, Star, Search, Filter, AlertCircle } from 'lucide-react'
+import { MessageSquare, Trash2, ArrowLeft, Star, Search, Filter } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 interface Review {
@@ -37,28 +37,7 @@ export default function AdminReviewsPage() {
     const router = useRouter()
     const supabase = createClient()
 
-    useEffect(() => {
-        const init = async () => {
-            // Check Admin Role
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return router.push('/login')
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', user.id)
-                .single()
-
-            if (profile?.role !== 'admin') {
-                return router.push('/')
-            }
-
-            fetchReviews()
-        }
-        init()
-    }, [router, supabase])
-
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         const { data, error } = await supabase
             .from('reviews')
             .select(`
@@ -81,10 +60,34 @@ export default function AdminReviewsPage() {
         if (error) {
             console.error('Error fetching reviews:', error)
         } else if (data) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             setReviews(data as any)
         }
         setLoading(false)
-    }
+    }, [supabase])
+
+    useEffect(() => {
+        const init = async () => {
+            // Check Admin Role
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return router.push('/login')
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single()
+
+            if (profile?.role !== 'admin') {
+                return router.push('/')
+            }
+
+            fetchReviews()
+        }
+        init()
+    }, [router, supabase, fetchReviews])
+
+
 
     const handleDelete = async (id: string) => {
         if (!confirm('ยืนยันที่จะลบรีวิวนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return
@@ -213,7 +216,7 @@ export default function AdminReviewsPage() {
 
                                             {/* Comment Body */}
                                             <p className="text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
-                                                "{review.comment || 'ไม่มีความคิดเห็น'}"
+                                                &quot;{review.comment || 'ไม่มีความคิดเห็น'}&quot;
                                             </p>
 
                                             {/* Actions */}

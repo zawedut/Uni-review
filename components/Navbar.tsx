@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { GraduationCap, LogOut, Settings, Menu, X } from 'lucide-react'
 
 export default function Navbar() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [user, setUser] = useState<any>(null)
     const [isAdmin, setIsAdmin] = useState(false)
     const [scrolled, setScrolled] = useState(false)
@@ -32,6 +33,7 @@ export default function Navbar() {
         const handleScroll = () => setScrolled(window.scrollY > 10)
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const handleLogout = async () => {

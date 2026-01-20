@@ -3,13 +3,15 @@
 import { useEffect, useState, use } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+
 import { Card, CardContent } from '@/components/ui/card'
-import { Star, GraduationCap, ArrowLeft, ChevronRight, BookOpen } from 'lucide-react'
+import { Star, GraduationCap, ChevronRight, BookOpen } from 'lucide-react'
 
 export default function DepartmentPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [dept, setDept] = useState<any>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [programs, setPrograms] = useState<any[]>([])
     const [progStats, setProgStats] = useState<Record<string, { rating: number, count: number }>>({})
     const [loading, setLoading] = useState(true)
@@ -63,6 +65,7 @@ export default function DepartmentPage({ params }: { params: Promise<{ id: strin
             setLoading(false)
         }
         fetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id])
 
     if (loading) {

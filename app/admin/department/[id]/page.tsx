@@ -1,18 +1,17 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, use, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea' // อย่าลืมลง textarea หรือใช้ input แทนก็ได้
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" // ถ้ายังไม่ลง Shadcn Select ให้ใช้ html select ธรรมดาได้
 import { ChevronLeft, Trash2, GraduationCap } from 'lucide-react'
 
 export default function ManagePrograms({ params }: { params: Promise<{ id: string }> }) {
     const { id: deptId } = use(params) // ใช้ use() แกะ Promise ตาม Next.js 16
     const [deptName, setDeptName] = useState('Loading...')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [programs, setPrograms] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
 
@@ -25,7 +24,7 @@ export default function ManagePrograms({ params }: { params: Promise<{ id: strin
     const supabase = createClient()
 
     // ฟังก์ชันทดสอบดึงคณะทั้งหมด (ไม่ filter university_id)
-    const fetchFaculties = async () => {
+    const fetchFaculties = useCallback(async () => {
         // 👇 ลองดึงมาทั้งหมดเลย (ลบบรรทัด .eq ทิ้งชั่วคราว)
         const { data, error } = await supabase
             .from('faculties')
@@ -38,7 +37,17 @@ export default function ManagePrograms({ params }: { params: Promise<{ id: strin
         } else {
             console.log("Data มาแล้ว:", data) // ดูใน Console ว่ามาไหม
         }
-    }
+    }, [supabase])
+
+    const fetchPrograms = useCallback(async () => {
+        const { data } = await supabase
+            .from('programs')
+            .select('*')
+            .eq('department_id', deptId)
+            .order('created_at', { ascending: true })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (data) setPrograms(data as any)
+    }, [deptId, supabase])
 
     useEffect(() => {
         const fetchData = async () => {
@@ -56,16 +65,7 @@ export default function ManagePrograms({ params }: { params: Promise<{ id: strin
             fetchFaculties()
         }
         fetchData()
-    }, [deptId])
-
-    const fetchPrograms = async () => {
-        const { data } = await supabase
-            .from('programs')
-            .select('*')
-            .eq('department_id', deptId)
-            .order('created_at', { ascending: true })
-        if (data) setPrograms(data)
-    }
+    }, [deptId, supabase, fetchPrograms, fetchFaculties])
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault()

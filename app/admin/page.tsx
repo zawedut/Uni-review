@@ -27,6 +27,7 @@ interface Stats {
 
 // Stats Card Component
 const StatsCard = ({ icon: Icon, label, value, color, trend }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
     label: string
     value: number
@@ -57,6 +58,7 @@ const StatsCard = ({ icon: Icon, label, value, color, trend }: {
 
 // Quick Action Card
 const QuickActionCard = ({ icon: Icon, title, description, href, color }: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
     title: string
     description: string
@@ -94,6 +96,32 @@ export default function AdminDashboard() {
     const supabase = createClient()
 
     // 1. เช็คสิทธิ์ Admin และโหลดข้อมูลเก่า
+    // ฟังก์ชันดึงรายชื่อมหาลัย
+    const fetchUniversities = async () => {
+        const { data } = await supabase.from('universities').select('*').order('created_at', { ascending: false })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (data) setUniversities(data as any)
+    }
+
+    // ฟังก์ชันดึง Statistics
+    const fetchStats = async () => {
+        const [unis, facs, depts, progs, revs] = await Promise.all([
+            supabase.from('universities').select('id', { count: 'exact', head: true }),
+            supabase.from('faculties').select('id', { count: 'exact', head: true }),
+            supabase.from('departments').select('id', { count: 'exact', head: true }),
+            supabase.from('programs').select('id', { count: 'exact', head: true }),
+            supabase.from('reviews').select('id', { count: 'exact', head: true }),
+        ])
+
+        setStats({
+            universities: unis.count || 0,
+            faculties: facs.count || 0,
+            departments: depts.count || 0,
+            programs: progs.count || 0,
+            reviews: revs.count || 0,
+        })
+    }
+
     useEffect(() => {
         const init = async () => {
             // เช็ค User
@@ -118,32 +146,10 @@ export default function AdminDashboard() {
             setLoading(false)
         }
         init()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [router, supabase])
 
-    // ฟังก์ชันดึงรายชื่อมหาลัย
-    const fetchUniversities = async () => {
-        const { data } = await supabase.from('universities').select('*').order('created_at', { ascending: false })
-        if (data) setUniversities(data)
-    }
 
-    // ฟังก์ชันดึง Statistics
-    const fetchStats = async () => {
-        const [unis, facs, depts, progs, revs] = await Promise.all([
-            supabase.from('universities').select('id', { count: 'exact', head: true }),
-            supabase.from('faculties').select('id', { count: 'exact', head: true }),
-            supabase.from('departments').select('id', { count: 'exact', head: true }),
-            supabase.from('programs').select('id', { count: 'exact', head: true }),
-            supabase.from('reviews').select('id', { count: 'exact', head: true }),
-        ])
-
-        setStats({
-            universities: unis.count || 0,
-            faculties: facs.count || 0,
-            departments: depts.count || 0,
-            programs: progs.count || 0,
-            reviews: revs.count || 0,
-        })
-    }
 
     // 2. ฟังก์ชันเพิ่มข้อมูล (Create)
     const handleSubmit = async (e: React.FormEvent) => {
