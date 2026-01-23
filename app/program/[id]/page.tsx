@@ -7,10 +7,42 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from '@/components/ui/textarea'
-import { Star, GraduationCap, Building2, Users, ChevronRight, PenLine, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Star, GraduationCap, Building2, Users, ChevronRight, PenLine, Sparkles, Plus, Minus } from 'lucide-react'
 import Link from 'next/link'
+import ReviewFilter from '@/components/ReviewFilter'
+import ReviewCard from '@/components/ReviewCard'
+import ReviewDetailModal from '@/components/ReviewDetailModal'
+import { SCORE_CATEGORIES, ALL_SCORE_TYPES } from '@/components/ScoreTable'
 
-// Star Rating Input - Adjusted size to prevent overlap
+// Types
+interface Review {
+    id: string
+    user_id: string
+    program_id: string
+    rating_academic: number
+    rating_social: number
+    rating_facility: number
+    comment: string
+    created_at: string
+    admission_round?: number
+    admission_year?: number
+    project_name?: string
+    portfolio_url?: string
+    gpax?: number
+    scores?: Record<string, number>
+    achievements?: string
+    likes?: number
+    dislikes?: number
+    profiles?: {
+        full_name?: string
+        email?: string
+    }
+}
+
+// Star Rating Input Component
 const StarInput = ({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) => (
     <div className="flex flex-col items-center justify-center p-2 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 transition-colors w-full">
         <label className="text-sm font-bold text-slate-700 mb-1 truncate w-full text-center">{label}</label>
@@ -43,126 +75,78 @@ const StarInput = ({ label, value, onChange }: { label: string, value: number, o
     </div>
 )
 
-// Review Card Component with Like/Dislike
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ReviewCard = ({ review }: { review: any }) => {
-    const [likes, setLikes] = useState<number>(review.likes || 0)
-    const [dislikes, setDislikes] = useState<number>(review.dislikes || 0)
-    const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null)
+// Score Input Component for TCAS scores
+const ScoreInput = ({
+    label,
+    value,
+    onChange
+}: {
+    label: string
+    value: number | undefined
+    onChange: (v: number | undefined) => void
+}) => (
+    <div className="flex items-center justify-between gap-2 p-2 bg-slate-50 rounded-lg">
+        <span className="text-sm text-slate-600 truncate">{label}</span>
+        <Input
+            type="number"
+            min={0}
+            max={100}
+            step={0.1}
+            className="w-20 h-8 text-sm text-center"
+            placeholder="-"
+            value={value ?? ''}
+            onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+        />
+    </div>
+)
 
-    const handleVote = (type: 'like' | 'dislike') => {
-        if (userVote === type) {
-            // Remove vote
-            setUserVote(null)
-            if (type === 'like') setLikes(prev => prev - 1)
-            else setDislikes(prev => prev - 1)
-        } else {
-            // Change vote
-            if (userVote === 'like') setLikes(prev => prev - 1)
-            if (userVote === 'dislike') setDislikes(prev => prev - 1)
-            setUserVote(type)
-            if (type === 'like') setLikes(prev => prev + 1)
-            else setDislikes(prev => prev + 1)
-        }
-    }
+// Generate years for dropdown
+const currentBuddhistYear = new Date().getFullYear() + 543
+const ADMISSION_YEARS = Array.from({ length: 6 }, (_, i) => currentBuddhistYear - 3 + i)
 
-    const avgRating = ((review.rating_academic + review.rating_social + review.rating_facility) / 3).toFixed(1)
-
-    return (
-        <Card className="group hover:shadow-xl transition-all duration-300 border-slate-200/50 bg-white/80 backdrop-blur-sm overflow-hidden">
-            <CardContent className="p-6">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                            {(review.profiles?.full_name || review.profiles?.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <p className="font-semibold text-slate-900">{review.profiles?.full_name || review.profiles?.email || 'ผู้ใช้งานทั่วไป'}</p>
-                            <p className="text-xs text-slate-400">
-                                {new Date(review.created_at).toLocaleDateString('th-TH', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                })}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-md">
-                        <Star className="w-4 h-4 fill-white" />
-                        <span className="font-bold">{avgRating}</span>
-                    </div>
-                </div>
-
-                {/* Comment */}
-                {review.comment && (
-                    <p className="text-slate-700 mb-4 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        &quot;{review.comment}&quot;
-                    </p>
-                )}
-
-                {/* Scores */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 text-sm font-medium border border-blue-200/50">
-                        📚 วิชาการ {review.rating_academic}/5
-                    </span>
-                    <span className="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 text-sm font-medium border border-pink-200/50">
-                        👥 สังคม {review.rating_social}/5
-                    </span>
-                    <span className="px-3 py-1.5 rounded-full bg-gradient-to-r from-green-50 to-green-100 text-green-700 text-sm font-medium border border-green-200/50">
-                        🏛️ สถานที่ {review.rating_facility}/5
-                    </span>
-                </div>
-
-                {/* Like/Dislike */}
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                    <button
-                        onClick={() => handleVote('like')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'like'
-                            ? 'bg-green-500 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-600 hover:bg-green-100 hover:text-green-600'
-                            }`}
-                    >
-                        <ThumbsUp className="w-4 h-4" />
-                        <span className="font-medium">{likes}</span>
-                    </button>
-                    <button
-                        onClick={() => handleVote('dislike')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'dislike'
-                            ? 'bg-red-500 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600'
-                            }`}
-                    >
-                        <ThumbsDown className="w-4 h-4" />
-                        <span className="font-medium">{dislikes}</span>
-                    </button>
-                    <span className="text-xs text-slate-400 ml-auto">
-                        คนอื่นเห็นว่ารีวิวนี้มีประโยชน์ไหม?
-                    </span>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
+// Use score types from ScoreTable component
+const SCORE_TYPES = ALL_SCORE_TYPES
 
 export default function ProgramReviewPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [program, setProgram] = useState<any>(null)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [reviews, setReviews] = useState<any[]>([])
+    const [reviews, setReviews] = useState<Review[]>([])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [isOpen, setIsOpen] = useState(false)
-    const [form, setForm] = useState({ academic: 0, social: 0, facility: 0, comment: '' })
     const [submitting, setSubmitting] = useState(false)
+
+    // Filter states
+    const [filterRound, setFilterRound] = useState('all')
+    const [filterYear, setFilterYear] = useState('all')
+
+    // Modal states
+    const [selectedReview, setSelectedReview] = useState<Review | null>(null)
+    const [isDetailOpen, setIsDetailOpen] = useState(false)
+
+    // Form states
+    const [formStep, setFormStep] = useState(1)
+    const [form, setForm] = useState({
+        academic: 0,
+        social: 0,
+        facility: 0,
+        comment: '',
+        admission_round: '',
+        admission_year: '',
+        project_name: '',
+        portfolio_url: '',
+        gpax: '',
+        achievements: '',
+        scores: {} as Record<string, number>
+    })
+    const [selectedScoreTypes, setSelectedScoreTypes] = useState<string[]>(['TGAT', 'A_Math1', 'A_Eng'])
 
     const supabase = createClient()
     const router = useRouter()
 
     const fetchReviews = useCallback(async () => {
-        // 1. Fetch reviews
         const { data: reviewsData, error } = await supabase
             .from('reviews')
             .select('*')
@@ -176,14 +160,12 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
         }
 
         if (reviewsData && reviewsData.length > 0) {
-            // 2. Fetch profiles related to these reviews manually
             const userIds = [...new Set(reviewsData.map(r => r.user_id))]
             const { data: profilesData } = await supabase
                 .from('profiles')
                 .select('id, full_name, email')
                 .in('id', userIds)
 
-            // 3. Map profiles to reviews
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const profilesMap: Record<string, any> = {}
             profilesData?.forEach(p => {
@@ -219,8 +201,19 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
         init()
     }, [id, supabase, fetchReviews])
 
+    // Filter reviews
+    const filteredReviews = reviews.filter(review => {
+        const matchRound = filterRound === 'all' || review.admission_round === parseInt(filterRound)
+        const matchYear = filterYear === 'all' || review.admission_year === parseInt(filterYear)
+        return matchRound && matchYear
+    })
 
+    const clearFilters = () => {
+        setFilterRound('all')
+        setFilterYear('all')
+    }
 
+    // Stats calculation
     const stats = reviews.reduce((acc, r) => ({
         academic: acc.academic + r.rating_academic,
         social: acc.social + r.rating_social,
@@ -237,25 +230,80 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
             alert('กรุณาให้คะแนนครบทุกช่อง')
             return
         }
+        if (!form.admission_round || !form.admission_year) {
+            alert('กรุณาเลือกรอบและปีที่ติด')
+            return
+        }
 
         setSubmitting(true)
-        const { error } = await supabase.from('reviews').insert([{
+
+        const reviewData: Record<string, unknown> = {
             program_id: id,
             user_id: user.id,
             rating_academic: form.academic,
             rating_social: form.social,
             rating_facility: form.facility,
-            comment: form.comment
-        }])
+            comment: form.comment,
+            admission_round: parseInt(form.admission_round),
+            admission_year: parseInt(form.admission_year),
+        }
+
+        // Add round-specific fields
+        // Round 1, 2, 4 = Portfolio/Project based
+        // Round 3 = Admission (score based)
+        const round = parseInt(form.admission_round)
+        if (round === 1 || round === 2 || round === 4) {
+            reviewData.project_name = form.project_name
+            reviewData.portfolio_url = form.portfolio_url
+            reviewData.achievements = form.achievements
+        } else if (round === 3) {
+            reviewData.gpax = form.gpax ? parseFloat(form.gpax) : null
+            reviewData.scores = Object.keys(form.scores).length > 0 ? form.scores : null
+        }
+
+        const { error } = await supabase.from('reviews').insert([reviewData])
 
         if (!error) {
             setIsOpen(false)
-            setForm({ academic: 0, social: 0, facility: 0, comment: '' })
+            setFormStep(1)
+            setForm({
+                academic: 0, social: 0, facility: 0, comment: '',
+                admission_round: '', admission_year: '', project_name: '',
+                portfolio_url: '', gpax: '', achievements: '', scores: {}
+            })
             fetchReviews()
         } else {
             alert(error.message)
         }
         setSubmitting(false)
+    }
+
+    const handleCardClick = (review: Review) => {
+        setSelectedReview(review)
+        setIsDetailOpen(true)
+    }
+
+    const addScoreType = (key: string) => {
+        if (!selectedScoreTypes.includes(key)) {
+            setSelectedScoreTypes([...selectedScoreTypes, key])
+        }
+    }
+
+    const removeScoreType = (key: string) => {
+        setSelectedScoreTypes(selectedScoreTypes.filter(k => k !== key))
+        const newScores = { ...form.scores }
+        delete newScores[key]
+        setForm({ ...form, scores: newScores })
+    }
+
+    const updateScore = (key: string, value: number | undefined) => {
+        if (value !== undefined) {
+            setForm({ ...form, scores: { ...form.scores, [key]: value } })
+        } else {
+            const newScores = { ...form.scores }
+            delete newScores[key]
+            setForm({ ...form, scores: newScores })
+        }
     }
 
     if (loading) {
@@ -347,51 +395,217 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                     </div>
 
                                     {/* Write Review Button */}
-                                    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                                    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setFormStep(1) }}>
                                         <DialogTrigger asChild>
                                             <Button className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200">
                                                 <PenLine className="w-5 h-5 mr-2" />
                                                 เขียนรีวิว
                                             </Button>
                                         </DialogTrigger>
-                                        <DialogContent className="max-w-lg">
+                                        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                                             <DialogHeader>
                                                 <DialogTitle className="flex items-center gap-2 text-xl">
                                                     <Sparkles className="w-5 h-5 text-amber-500" />
-                                                    เขียนรีวิว
+                                                    เขียนรีวิว - ขั้นตอน {formStep}/3
                                                 </DialogTitle>
                                             </DialogHeader>
-                                            <div className="space-y-5 py-4">
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                    <StarInput label="📚 วิชาการ" value={form.academic} onChange={(v) => setForm({ ...form, academic: v })} />
-                                                    <StarInput label="👥 สังคม" value={form.social} onChange={(v) => setForm({ ...form, social: v })} />
-                                                    <StarInput label="🏛️ สถานที่" value={form.facility} onChange={(v) => setForm({ ...form, facility: v })} />
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-semibold text-slate-700 block mb-2">💬 ความคิดเห็น</label>
-                                                    <Textarea
-                                                        placeholder="แชร์ประสบการณ์ของคุณ... อะไรดี อะไรควรปรับปรุง?"
-                                                        rows={4}
-                                                        value={form.comment}
-                                                        onChange={(e) => setForm({ ...form, comment: e.target.value })}
-                                                        className="resize-none"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    onClick={handleSubmit}
-                                                    disabled={submitting}
-                                                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                                                >
-                                                    {submitting ? (
-                                                        <>
-                                                            <span className="animate-spin mr-2">⏳</span>
-                                                            กำลังส่ง...
-                                                        </>
-                                                    ) : (
-                                                        '🚀 ส่งรีวิว'
+
+                                            {/* Step 1: Admission Info */}
+                                            {formStep === 1 && (
+                                                <div className="space-y-5 py-4">
+                                                    <div className="space-y-3">
+                                                        <Label className="text-sm font-semibold">รอบที่ติด *</Label>
+                                                        <Select value={form.admission_round} onValueChange={(v) => setForm({ ...form, admission_round: v })}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="เลือกรอบ TCAS" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="1">รอบ 1 - Portfolio</SelectItem>
+                                                                <SelectItem value="2">รอบ 2 - Quota</SelectItem>
+                                                                <SelectItem value="3">รอบ 3 - Admission</SelectItem>
+                                                                <SelectItem value="4">รอบ 4 - Direct Admission</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <Label className="text-sm font-semibold">ปีที่เข้าเรียน *</Label>
+                                                        <Select value={form.admission_year} onValueChange={(v) => setForm({ ...form, admission_year: v })}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="เลือกปี พ.ศ." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {ADMISSION_YEARS.map(year => (
+                                                                    <SelectItem key={year} value={String(year)}>พ.ศ. {year}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    {/* Round 1, 2, 4: Portfolio/Project fields */}
+                                                    {(form.admission_round === '1' || form.admission_round === '2' || form.admission_round === '4') && (
+                                                        <div className={`space-y-4 p-4 rounded-xl border ${form.admission_round === '4'
+                                                                ? 'bg-sky-50 border-sky-100'
+                                                                : 'bg-violet-50 border-violet-100'
+                                                            }`}>
+                                                            <h4 className={`font-bold ${form.admission_round === '4' ? 'text-sky-700' : 'text-violet-700'
+                                                                }`}>
+                                                                📁 {form.admission_round === '4' ? 'ข้อมูลการรับตรง' : 'ข้อมูล Portfolio'}
+                                                            </h4>
+                                                            <div className="space-y-3">
+                                                                <Label className="text-sm">ชื่อโครงการที่ยื่น</Label>
+                                                                <Input
+                                                                    placeholder={form.admission_round === '4'
+                                                                        ? "เช่น รับตรงอิสระ, โครงการพิเศษ"
+                                                                        : "เช่น โครงการ Gifted, โควต้าพื้นที่"
+                                                                    }
+                                                                    value={form.project_name}
+                                                                    onChange={(e) => setForm({ ...form, project_name: e.target.value })}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                <Label className="text-sm">ลิงก์ Portfolio (ถ้ามี)</Label>
+                                                                <Input
+                                                                    placeholder="https://..."
+                                                                    value={form.portfolio_url}
+                                                                    onChange={(e) => setForm({ ...form, portfolio_url: e.target.value })}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                <Label className="text-sm">รายละเอียดผลงาน/กิจกรรม</Label>
+                                                                <Textarea
+                                                                    placeholder="เล่าสั้นๆ ว่าคุณมีผลงานอะไรบ้าง..."
+                                                                    rows={3}
+                                                                    value={form.achievements}
+                                                                    onChange={(e) => setForm({ ...form, achievements: e.target.value })}
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                </Button>
-                                            </div>
+
+                                                    {/* Round 3: Admission scores */}
+                                                    {form.admission_round === '3' && (
+                                                        <div className="space-y-4 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                                                            <h4 className="font-bold text-emerald-700">📊 ข้อมูลคะแนนสอบ</h4>
+                                                            <div className="space-y-3">
+                                                                <Label className="text-sm">GPAX</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0"
+                                                                    max="4"
+                                                                    placeholder="เช่น 3.85"
+                                                                    value={form.gpax}
+                                                                    onChange={(e) => setForm({ ...form, gpax: e.target.value })}
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <Label className="text-sm">คะแนนสอบ</Label>
+                                                                    <Select onValueChange={addScoreType}>
+                                                                        <SelectTrigger className="w-[180px] h-8 text-xs">
+                                                                            <Plus className="w-3 h-3 mr-1" />
+                                                                            <SelectValue placeholder="เพิ่มวิชา" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {SCORE_TYPES.filter(s => !selectedScoreTypes.includes(s.key)).map(score => (
+                                                                                <SelectItem key={score.key} value={score.key}>{score.label}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    {selectedScoreTypes.map(key => {
+                                                                        const scoreType = SCORE_TYPES.find(s => s.key === key)
+                                                                        return (
+                                                                            <div key={key} className="flex items-center gap-2">
+                                                                                <ScoreInput
+                                                                                    label={scoreType?.label || key}
+                                                                                    value={form.scores[key]}
+                                                                                    onChange={(v) => updateScore(key, v)}
+                                                                                />
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeScoreType(key)}
+                                                                                    className="p-1 text-red-400 hover:text-red-600"
+                                                                                >
+                                                                                    <Minus className="w-4 h-4" />
+                                                                                </button>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <Button
+                                                        onClick={() => setFormStep(2)}
+                                                        disabled={!form.admission_round || !form.admission_year}
+                                                        className="w-full"
+                                                    >
+                                                        ถัดไป
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            {/* Step 2: Ratings */}
+                                            {formStep === 2 && (
+                                                <div className="space-y-5 py-4">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                        <StarInput label="📚 วิชาการ" value={form.academic} onChange={(v) => setForm({ ...form, academic: v })} />
+                                                        <StarInput label="👥 สังคม" value={form.social} onChange={(v) => setForm({ ...form, social: v })} />
+                                                        <StarInput label="🏛️ สถานที่" value={form.facility} onChange={(v) => setForm({ ...form, facility: v })} />
+                                                    </div>
+                                                    <div className="flex gap-3">
+                                                        <Button variant="outline" onClick={() => setFormStep(1)} className="flex-1">
+                                                            ย้อนกลับ
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => setFormStep(3)}
+                                                            disabled={form.academic === 0 || form.social === 0 || form.facility === 0}
+                                                            className="flex-1"
+                                                        >
+                                                            ถัดไป
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 3: Comment */}
+                                            {formStep === 3 && (
+                                                <div className="space-y-5 py-4">
+                                                    <div>
+                                                        <Label className="text-sm font-semibold text-slate-700 block mb-2">💬 ความคิดเห็น</Label>
+                                                        <Textarea
+                                                            placeholder="แชร์ประสบการณ์ของคุณ... อะไรดี อะไรควรปรับปรุง? บรรยากาศในคณะเป็นยังไง?"
+                                                            rows={5}
+                                                            value={form.comment}
+                                                            onChange={(e) => setForm({ ...form, comment: e.target.value })}
+                                                            className="resize-none"
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-3">
+                                                        <Button variant="outline" onClick={() => setFormStep(2)} className="flex-1">
+                                                            ย้อนกลับ
+                                                        </Button>
+                                                        <Button
+                                                            onClick={handleSubmit}
+                                                            disabled={submitting}
+                                                            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                                                        >
+                                                            {submitting ? (
+                                                                <>
+                                                                    <span className="animate-spin mr-2">⏳</span>
+                                                                    กำลังส่ง...
+                                                                </>
+                                                            ) : (
+                                                                '🚀 ส่งรีวิว'
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </DialogContent>
                                     </Dialog>
                                 </CardContent>
@@ -406,6 +620,19 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                     <span className="text-sm font-normal text-slate-500">({reviews.length})</span>
                                 )}
                             </h2>
+
+                            {/* Filter Bar */}
+                            {reviews.length > 0 && (
+                                <ReviewFilter
+                                    selectedRound={filterRound}
+                                    selectedYear={filterYear}
+                                    onRoundChange={setFilterRound}
+                                    onYearChange={setFilterYear}
+                                    onClear={clearFilters}
+                                    totalCount={reviews.length}
+                                    filteredCount={filteredReviews.length}
+                                />
+                            )}
 
                             {reviews.length === 0 ? (
                                 <Card className="border-dashed border-2 border-slate-200 bg-white/50">
@@ -422,10 +649,23 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                         </Button>
                                     </CardContent>
                                 </Card>
+                            ) : filteredReviews.length === 0 ? (
+                                <Card className="border-dashed border-2 border-slate-200 bg-white/50">
+                                    <CardContent className="py-12 text-center">
+                                        <p className="text-slate-500">ไม่พบรีวิวที่ตรงกับตัวกรอง</p>
+                                        <Button variant="link" onClick={clearFilters} className="mt-2">
+                                            ล้างตัวกรอง
+                                        </Button>
+                                    </CardContent>
+                                </Card>
                             ) : (
                                 <div className="space-y-5">
-                                    {reviews.map((review) => (
-                                        <ReviewCard key={review.id} review={review} />
+                                    {filteredReviews.map((review) => (
+                                        <ReviewCard
+                                            key={review.id}
+                                            review={review}
+                                            onClick={() => handleCardClick(review)}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -433,6 +673,13 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                     </div>
                 </div>
             </section>
+
+            {/* Review Detail Modal */}
+            <ReviewDetailModal
+                review={selectedReview}
+                isOpen={isDetailOpen}
+                onClose={() => setIsDetailOpen(false)}
+            />
         </div>
     )
 }

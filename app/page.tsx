@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, GraduationCap, ChevronRight, Building2, Star } from 'lucide-react'
+import { GraduationCap, ChevronRight, Building2, Star, Search } from 'lucide-react'
+import GlobalSearch from '@/components/GlobalSearch'
 
 interface University {
   id: string
@@ -114,23 +114,14 @@ export default function Home() {
               <br />สำหรับคุณ
             </h1>
             <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-              อ่านรีวิวจากนักศึกษาจริง เปรียบเทียบคณะและหลักสูตร ตัดสินใจได้อย่างมั่นใจ
+              ค้นหามหาวิทยาลัย คณะ หลักสูตร อ่านรีวิวจากนักศึกษาจริง ตัดสินใจได้อย่างมั่นใจ
             </p>
 
-            {/* Search Box */}
-            <div className="relative max-w-xl mx-auto">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-20" />
-              <div className="relative bg-white rounded-2xl shadow-2xl p-2">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
-                  <Input
-                    className="pl-14 h-14 text-lg border-0 shadow-none focus-visible:ring-0 bg-transparent"
-                    placeholder="ค้นหาชื่อมหาวิทยาลัย..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-              </div>
+            {/* Global Search Box */}
+            <div className="max-w-2xl mx-auto">
+              <GlobalSearch
+                placeholder="พิมพ์ค้นหา... เช่น จุฬา, วิศวะ, แพทย์, เศรษฐศาสตร์"
+              />
             </div>
 
             {/* Quick Stats */}
