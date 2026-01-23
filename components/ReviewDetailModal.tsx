@@ -15,7 +15,8 @@ import {
     BookOpen,
     ThumbsUp,
     ThumbsDown,
-    Trophy
+    Trophy,
+    Trash2
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -47,6 +48,8 @@ interface ReviewDetailModalProps {
     review: Review | null
     isOpen: boolean
     onClose: () => void
+    currentUserId?: string
+    onDelete?: (reviewId: string) => Promise<void>
 }
 
 const roundConfig: Record<number, { label: string; color: string; gradient: string; icon: React.ReactNode }> = {
@@ -76,10 +79,11 @@ const roundConfig: Record<number, { label: string; color: string; gradient: stri
     },
 }
 
-export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDetailModalProps) {
+export default function ReviewDetailModal({ review, isOpen, onClose, currentUserId, onDelete }: ReviewDetailModalProps) {
     const [likes, setLikes] = useState(review?.likes || 0)
     const [dislikes, setDislikes] = useState(review?.dislikes || 0)
     const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     if (!review) return null
 
@@ -87,6 +91,7 @@ export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDet
     const round = review.admission_round ? roundConfig[review.admission_round] : null
     // Round 1, 2, 4 are portfolio/project based
     const isPortfolioRound = review.admission_round === 1 || review.admission_round === 2 || review.admission_round === 4
+    const isOwnReview = currentUserId && review.user_id === currentUserId
 
     const handleVote = (type: 'like' | 'dislike') => {
         if (userVote === type) {
@@ -99,6 +104,20 @@ export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDet
             setUserVote(type)
             if (type === 'like') setLikes(prev => prev + 1)
             else setDislikes(prev => prev + 1)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!onDelete || !confirm('คุณต้องการลบรีวิวนี้หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้')) return
+
+        setIsDeleting(true)
+        try {
+            await onDelete(review.id)
+            onClose()
+        } catch (error) {
+            alert('เกิดข้อผิดพลาดในการลบรีวิว')
+        } finally {
+            setIsDeleting(false)
         }
     }
 
@@ -168,8 +187,8 @@ export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDet
                     {/* Portfolio/Project Section (Round 1, 2, 4) */}
                     {isPortfolioRound && (
                         <div className={`space-y-4 p-4 rounded-xl bg-gradient-to-br border ${review.admission_round === 4
-                                ? 'from-sky-50 to-blue-50 border-sky-100'
-                                : 'from-violet-50 to-purple-50 border-violet-100'
+                            ? 'from-sky-50 to-blue-50 border-sky-100'
+                            : 'from-violet-50 to-purple-50 border-violet-100'
                             }`}>
                             <h4 className={`font-bold flex items-center gap-2 ${review.admission_round === 4 ? 'text-sky-800' : 'text-violet-800'
                                 }`}>
@@ -197,8 +216,8 @@ export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDet
                                 <Button
                                     variant="outline"
                                     className={`gap-2 ${review.admission_round === 4
-                                            ? 'border-sky-300 text-sky-700 hover:bg-sky-100'
-                                            : 'border-violet-300 text-violet-700 hover:bg-violet-100'
+                                        ? 'border-sky-300 text-sky-700 hover:bg-sky-100'
+                                        : 'border-violet-300 text-violet-700 hover:bg-violet-100'
                                         }`}
                                     onClick={() => window.open(review.portfolio_url, '_blank')}
                                 >
@@ -242,30 +261,46 @@ export default function ReviewDetailModal({ review, isOpen, onClose }: ReviewDet
                     )}
 
                     {/* Like/Dislike Section */}
-                    <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                        <span className="text-sm text-slate-500">รีวิวนี้มีประโยชน์ไหม?</span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => handleVote('like')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'like'
-                                    ? 'bg-green-500 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-green-100 hover:text-green-600'
-                                    }`}
-                            >
-                                <ThumbsUp className="w-4 h-4" />
-                                <span className="font-medium">{likes}</span>
-                            </button>
-                            <button
-                                onClick={() => handleVote('dislike')}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'dislike'
-                                    ? 'bg-red-500 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600'
-                                    }`}
-                            >
-                                <ThumbsDown className="w-4 h-4" />
-                                <span className="font-medium">{dislikes}</span>
-                            </button>
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm text-slate-500">รีวิวนี้มีประโยชน์ไหม?</span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => handleVote('like')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'like'
+                                        ? 'bg-green-500 text-white shadow-md'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-green-100 hover:text-green-600'
+                                        }`}
+                                >
+                                    <ThumbsUp className="w-4 h-4" />
+                                    <span className="font-medium">{likes}</span>
+                                </button>
+                                <button
+                                    onClick={() => handleVote('dislike')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 ${userVote === 'dislike'
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600'
+                                        }`}
+                                >
+                                    <ThumbsDown className="w-4 h-4" />
+                                    <span className="font-medium">{dislikes}</span>
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Delete Button for own reviews */}
+                        {isOwnReview && onDelete && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="gap-2"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                {isDeleting ? 'กำลังลบ...' : 'ลบรีวิว'}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </DialogContent>

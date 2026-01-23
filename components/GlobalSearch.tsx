@@ -316,27 +316,27 @@ export default function GlobalSearch({ className, placeholder = "ค้นหา
                                 >
                                     <div
                                         className={cn(
-                                            "flex items-center gap-4 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer",
+                                            "flex items-start gap-4 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer text-left",
                                             selectedIndex === index && "bg-blue-50"
                                         )}
                                     >
                                         <div className={cn(
-                                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5",
                                             result.type === 'university' && "bg-blue-100 text-blue-600",
                                             result.type === 'faculty' && "bg-purple-100 text-purple-600",
                                             result.type === 'program' && "bg-emerald-100 text-emerald-600"
                                         )}>
                                             {getTypeIcon(result.type)}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-slate-800 truncate">
+                                        <div className="flex-1 min-w-0 text-left">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-semibold text-slate-800">
                                                     {result.name}
                                                 </span>
                                                 {getTypeBadge(result.type)}
                                             </div>
                                             {result.subtitle && (
-                                                <p className="text-sm text-slate-500 truncate">{result.subtitle}</p>
+                                                <p className="text-sm text-slate-500 mt-0.5">{result.subtitle}</p>
                                             )}
                                         </div>
                                     </div>

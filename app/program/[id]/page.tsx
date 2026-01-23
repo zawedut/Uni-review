@@ -445,8 +445,8 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                                     {/* Round 1, 2, 4: Portfolio/Project fields */}
                                                     {(form.admission_round === '1' || form.admission_round === '2' || form.admission_round === '4') && (
                                                         <div className={`space-y-4 p-4 rounded-xl border ${form.admission_round === '4'
-                                                                ? 'bg-sky-50 border-sky-100'
-                                                                : 'bg-violet-50 border-violet-100'
+                                                            ? 'bg-sky-50 border-sky-100'
+                                                            : 'bg-violet-50 border-violet-100'
                                                             }`}>
                                                             <h4 className={`font-bold ${form.admission_round === '4' ? 'text-sky-700' : 'text-violet-700'
                                                                 }`}>
@@ -679,6 +679,12 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                 review={selectedReview}
                 isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
+                currentUserId={user?.id}
+                onDelete={async (reviewId) => {
+                    const { error } = await supabase.from('reviews').delete().eq('id', reviewId)
+                    if (error) throw error
+                    fetchReviews()
+                }}
             />
         </div>
     )
