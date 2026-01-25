@@ -32,7 +32,7 @@ export default function LoginPage() {
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-600 mb-3">
                             <GraduationCap className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-xl font-bold text-gray-900">Mind Review</h1>
+                        <h1 className="text-xl font-bold text-gray-900">Buddy Review</h1>
                         <p className="text-sm text-gray-500 mt-1">เพื่อเขียนรีวิวและแชร์ประสบการณ์</p>
                     </div>
 

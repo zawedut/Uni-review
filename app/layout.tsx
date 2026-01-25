@@ -11,7 +11,7 @@ const ibmPlexSansThai = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "Mind Review | รีวิวมหาวิทยาลัยไทย",
+  title: "Buddy Review | รีวิวมหาวิทยาลัยไทย",
   description: "ค้นหาและอ่านรีวิวมหาวิทยาลัย คณะ และหลักสูตรจากนักศึกษาจริง",
 };
 

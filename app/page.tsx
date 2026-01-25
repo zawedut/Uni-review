@@ -262,10 +262,10 @@ export default function Home() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <span className="font-bold text-xl text-slate-900">Mind Review</span>
+              <span className="font-bold text-xl text-slate-900">Buddy Review</span>
             </div>
             <p className="text-sm text-slate-500">
-              © 2026 Mind Review - แพลตฟอร์มรีวิวมหาวิทยาลัยไทย
+              © 2026 Buddy Review - แพลตฟอร์มรีวิวมหาวิทยาลัยไทย
             </p>
           </div>
         </div>
