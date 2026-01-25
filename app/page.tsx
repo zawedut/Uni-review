@@ -99,7 +99,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden">
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-24">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full blur-3xl" />
@@ -118,7 +118,7 @@ export default function Home() {
             </p>
 
             {/* Global Search Box */}
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto relative z-50">
               <GlobalSearch
                 placeholder="พิมพ์ค้นหา... เช่น จุฬา, วิศวะ, แพทย์, เศรษฐศาสตร์"
               />
