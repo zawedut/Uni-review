@@ -255,7 +255,7 @@ export default function GlobalSearch({ className, placeholder = "ค้นหา
     const popularSearches = ['จุฬาลงกรณ์', 'มหิดล', 'วิศวกรรม', 'แพทย์', 'นิติศาสตร์', 'เศรษฐศาสตร์']
 
     return (
-        <div ref={containerRef} className={cn("relative w-full", className)}>
+        <div ref={containerRef} className={cn("relative w-full z-50", className)}>
             {/* Search Input */}
             <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-20" />

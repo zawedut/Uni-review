@@ -47,7 +47,7 @@ export default function ReviewFilter({
     const selectedRoundData = ADMISSION_ROUNDS.find(r => r.value === selectedRound)
 
     return (
-        <div className="sticky top-20 z-10 mb-8">
+        <div className="relative sm:sticky sm:top-20 z-20 mb-8">
             {/* Main Filter Card */}
             <div className="relative overflow-hidden bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-200/50 shadow-xl">
                 {/* Decorative gradient background */}
