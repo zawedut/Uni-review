@@ -88,6 +88,7 @@ export default function ReviewsFeedPage() {
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
     const [hasMore, setHasMore] = useState(true)
+    const [fetchError, setFetchError] = useState<string | null>(null)
 
     // Filters
     const [sortBy, setSortBy] = useState<'latest' | 'rating'>('latest')
@@ -150,7 +151,14 @@ export default function ReviewsFeedPage() {
 
         const { data, error } = await query
 
-        if (!error && data) {
+        if (error) {
+            console.error('Error fetching reviews:', error)
+            setFetchError(error.message)
+            setLoading(false)
+            return
+        }
+
+        if (data) {
             // Client-side filter for university (since it's nested)
             let filtered = data as unknown as ReviewWithContext[]
 
@@ -216,6 +224,15 @@ export default function ReviewsFeedPage() {
                     </h1>
                     <p className="text-slate-500">รีวิวล่าสุดจากนักศึกษาจริงทุกมหาวิทยาลัย</p>
                 </div>
+
+                {/* Error Banner */}
+                {fetchError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 text-center">
+                        <p className="font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+                        <p className="text-sm">{fetchError}</p>
+                        <p className="text-xs mt-2 text-red-400">Please capture this screen and send to developer.</p>
+                    </div>
+                )}
 
                 {/* Filters */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-lg p-4 mb-8 sm:sticky sm:top-20 z-20">

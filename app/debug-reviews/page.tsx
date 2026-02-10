@@ -23,7 +23,6 @@ export default async function DebugReviewsPage() {
             id,
             rating_academic,
             program_id,
-            profiles ( full_name, email ),
             programs (
                 id,
                 name_th,
