@@ -137,7 +137,12 @@ export default function ReviewsFeedPage() {
                         )
                     )
                 )
+
             `)
+
+        // Debug log
+        console.log('Fetching reviews with query:', query)
+
 
         // Sort
         if (sortBy === 'latest') {
@@ -157,6 +162,10 @@ export default function ReviewsFeedPage() {
             setLoading(false)
             return
         }
+
+        console.log('Fetched raw data:', data)
+
+
 
         if (data) {
             // Client-side filter for university (since it's nested)
@@ -232,7 +241,18 @@ export default function ReviewsFeedPage() {
                         <p className="text-sm">{fetchError}</p>
                         <p className="text-xs mt-2 text-red-400">Please capture this screen and send to developer.</p>
                     </div>
+
                 )}
+
+                {/* DEBUG SECTION */}
+                <div className="bg-slate-100 p-4 rounded-lg mb-8 text-xs font-mono text-slate-600 border border-slate-200">
+                    <p><strong>Debug Info:</strong></p>
+                    <p>Loading: {loading ? 'Yes' : 'No'}</p>
+                    <p>Reviews Count: {reviews.length}</p>
+                    <p>Has Error: {fetchError || 'No'}</p>
+                    <p>Filter Uni: {filterUni}</p>
+                    <p>Filter Type: {filterType}</p>
+                </div>
 
                 {/* Filters */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-lg p-4 mb-8 sm:sticky sm:top-20 z-20">
