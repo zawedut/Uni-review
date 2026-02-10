@@ -23,6 +23,7 @@ interface Review {
     rating_facility: number
     comment: string
     created_at: string
+    review_type?: string
     admission_round?: number
     admission_year?: number
     project_name?: string
@@ -30,6 +31,15 @@ interface Review {
     gpax?: number
     scores?: Record<string, number>
     achievements?: string
+    study_year?: string
+    favorite_subjects?: string
+    workload_rating?: number
+    study_tips?: string
+    rating_social_friends?: number
+    rating_cost?: number
+    rating_food?: number
+    rating_environment?: number
+    rating_overall?: number
     likes?: number
     dislikes?: number
     profiles?: {
@@ -75,8 +85,9 @@ const roundConfig: Record<number, { label: string; color: string; gradient: stri
 }
 
 export default function ReviewCard({ review, onClick }: ReviewCardProps) {
-    const avgRating = ((review.rating_academic + review.rating_social + review.rating_facility) / 3).toFixed(1)
+    const avgRating = (review.review_type === 'study' && review.rating_overall) ? review.rating_overall.toFixed(1) : ((review.rating_academic + review.rating_social + review.rating_facility) / 3).toFixed(1)
     const round = review.admission_round ? roundConfig[review.admission_round] : null
+    const isStudyReview = review.review_type === 'study'
     // Round 1, 2, 4 are portfolio/project based
     const isPortfolioRound = review.admission_round === 1 || review.admission_round === 2 || review.admission_round === 4
 
@@ -87,25 +98,23 @@ export default function ReviewCard({ review, onClick }: ReviewCardProps) {
 
     return (
         <Card
-            className={cn(
-                "group cursor-pointer transition-all duration-300 border-slate-200/50 bg-white/80 backdrop-blur-sm overflow-hidden",
-                "hover:shadow-xl hover:scale-[1.01] hover:border-blue-200",
-                "active:scale-[0.99]"
-            )}
             onClick={onClick}
+            className="group relative bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer overflow-hidden"
         >
             <CardContent className="p-0">
-                {/* Color Strip on top based on round */}
-                {round && (
+                {/* Color Strip on top based on type/round */}
+                {isStudyReview ? (
+                    <div className="h-1.5 bg-gradient-to-r from-purple-500 to-pink-500 w-full" />
+                ) : round ? (
                     <div className={cn("h-1.5 bg-gradient-to-r w-full", round.gradient)} />
-                )}
+                ) : null}
 
                 <div className="p-5">
                     {/* Header Row */}
                     <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3 min-w-0">
                             {/* Avatar */}
-                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-base shadow-lg shrink-0">
+                            <div className={cn("w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base shadow-lg shrink-0", isStudyReview ? "bg-gradient-to-br from-purple-500 to-pink-500" : "bg-gradient-to-br from-blue-500 to-purple-600")}>
                                 {(review.profiles?.full_name || review.profiles?.email || 'U').charAt(0).toUpperCase()}
                             </div>
 
@@ -132,24 +141,58 @@ export default function ReviewCard({ review, onClick }: ReviewCardProps) {
 
                     {/* Badges Row */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                        {round && (
+                        {isStudyReview ? (
+                            <Badge className="bg-purple-100 text-purple-700 border-purple-200 border gap-1 text-xs px-2.5 py-0.5">
+                                <BookOpen className="w-3.5 h-3.5" />
+                                รีวิวการเรียน
+                            </Badge>
+                        ) : round ? (
                             <Badge className={cn(round.color, "border gap-1 text-xs px-2.5 py-0.5")}>
                                 {round.icon}
                                 รอบ {review.admission_round}
                             </Badge>
-                        )}
+                        ) : null}
                         {review.admission_year && (
                             <Badge variant="outline" className="gap-1 text-xs px-2.5 py-0.5 border-slate-200">
                                 <Calendar className="w-3 h-3" />
                                 {review.admission_year}
                             </Badge>
                         )}
+                        {isStudyReview && review.study_year && (
+                            <Badge variant="outline" className="gap-1 text-xs px-2.5 py-0.5 border-purple-200 text-purple-600">
+                                ชั้นปี {review.study_year === 'grad' ? 'จบแล้ว' : review.study_year}
+                            </Badge>
+                        )}
                     </div>
 
                     {/* Content Preview */}
                     <div className="space-y-3">
+                        {/* Study Review Preview */}
+                        {isStudyReview && (
+                            <div className="p-3 rounded-lg bg-purple-50">
+                                <div className="flex items-center gap-4">
+                                    {review.workload_rating && (
+                                        <div>
+                                            <span className="text-xs text-purple-600 block mb-0.5">ภาระงาน</span>
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3, 4, 5].map(i => (
+                                                    <div key={i} className={cn("w-4 h-4 rounded-sm", i <= review.workload_rating! ? 'bg-purple-500' : 'bg-purple-200')} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {review.favorite_subjects && (
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-xs text-purple-600 block mb-0.5">วิชาที่ชอบ</span>
+                                            <p className="text-sm text-purple-800 font-medium truncate">{review.favorite_subjects}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Portfolio/Project Round Preview (Round 1, 2, 4) */}
-                        {isPortfolioRound && review.project_name && (
+                        {!isStudyReview && isPortfolioRound && review.project_name && (
                             <div className={cn("p-3 rounded-lg", round?.bgLight || "bg-slate-50")}>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="min-w-0">
@@ -195,17 +238,27 @@ export default function ReviewCard({ review, onClick }: ReviewCardProps) {
                         )}
 
                         {/* Mini Rating Breakdown */}
-                        <div className="flex items-center gap-3 text-xs">
-                            <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 font-medium">
-                                📚 {review.rating_academic}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md bg-pink-50 text-pink-600 font-medium">
-                                👥 {review.rating_social}
-                            </span>
-                            <span className="px-2.5 py-1 rounded-md bg-green-50 text-green-600 font-medium">
-                                🏛️ {review.rating_facility}
-                            </span>
-                        </div>
+                        {isStudyReview ? (
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                                <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-600 font-medium">👫 {review.rating_social_friends || review.rating_social}</span>
+                                <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-600 font-medium">💰 {review.rating_cost || '-'}</span>
+                                <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-600 font-medium">🍜 {review.rating_food || '-'}</span>
+                                <span className="px-2 py-1 rounded-md bg-purple-50 text-purple-600 font-medium">🌿 {review.rating_environment || review.rating_facility}</span>
+                                <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-600 font-medium">⭐ {review.rating_overall || review.rating_academic}</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-3 text-xs">
+                                <span className="px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 font-medium">
+                                    📚 {review.rating_academic}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-md bg-pink-50 text-pink-600 font-medium">
+                                    👥 {review.rating_social}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-md bg-green-50 text-green-600 font-medium">
+                                    🏛️ {review.rating_facility}
+                                </span>
+                            </div>
+                        )}
 
                         {/* Comment Preview */}
                         {review.comment && (

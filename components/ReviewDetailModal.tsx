@@ -29,6 +29,7 @@ interface Review {
     rating_facility: number
     comment: string
     created_at: string
+    review_type?: string
     admission_round?: number
     admission_year?: number
     project_name?: string
@@ -36,6 +37,15 @@ interface Review {
     gpax?: number
     scores?: Record<string, number>
     achievements?: string
+    study_year?: string
+    favorite_subjects?: string
+    workload_rating?: number
+    study_tips?: string
+    rating_social_friends?: number
+    rating_cost?: number
+    rating_food?: number
+    rating_environment?: number
+    rating_overall?: number
     likes?: number
     dislikes?: number
     profiles?: {
@@ -147,16 +157,26 @@ export default function ReviewDetailModal({ review, isOpen, onClose, currentUser
                 <div className="space-y-6 py-4">
                     {/* Badges Row */}
                     <div className="flex flex-wrap gap-2">
-                        {round && (
+                        {review.review_type === 'study' ? (
+                            <Badge className="bg-purple-100 text-purple-700 border-purple-200 border gap-1.5 px-3 py-1">
+                                <BookOpen className="w-3.5 h-3.5" />
+                                📚 รีวิวการเรียน
+                            </Badge>
+                        ) : round ? (
                             <Badge className={`${round.color} border gap-1.5 px-3 py-1`}>
                                 {round.icon}
                                 รอบ {review.admission_round} - {round.label}
                             </Badge>
-                        )}
+                        ) : null}
                         {review.admission_year && (
                             <Badge variant="outline" className="gap-1.5 px-3 py-1">
                                 <Calendar className="w-3.5 h-3.5" />
                                 ปี {review.admission_year}
+                            </Badge>
+                        )}
+                        {review.review_type === 'study' && review.study_year && (
+                            <Badge variant="outline" className="gap-1.5 px-3 py-1 border-purple-200 text-purple-600">
+                                ชั้นปี {review.study_year === 'grad' ? 'จบแล้ว' : review.study_year}
                             </Badge>
                         )}
                         <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 gap-1 px-3 py-1">
@@ -166,23 +186,91 @@ export default function ReviewDetailModal({ review, isOpen, onClose, currentUser
                     </div>
 
                     {/* Rating Breakdown */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="flex flex-col items-center p-4 rounded-xl bg-blue-50 border border-blue-100">
-                            <GraduationCap className="w-6 h-6 text-blue-600 mb-2" />
-                            <span className="text-2xl font-black text-blue-600">{review.rating_academic}</span>
-                            <span className="text-xs text-blue-600/70 font-medium">วิชาการ</span>
+                    {review.review_type === 'study' ? (
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col items-center p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                    <span className="text-lg mb-1">👫</span>
+                                    <span className="text-2xl font-black text-purple-600">{review.rating_social_friends || review.rating_social}</span>
+                                    <span className="text-xs text-purple-600/70 font-medium">สังคม / เพื่อน</span>
+                                </div>
+                                <div className="flex flex-col items-center p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                    <span className="text-lg mb-1">💰</span>
+                                    <span className="text-2xl font-black text-purple-600">{review.rating_cost || '-'}</span>
+                                    <span className="text-xs text-purple-600/70 font-medium">ค่าครองชีพ</span>
+                                </div>
+                                <div className="flex flex-col items-center p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                    <span className="text-lg mb-1">🍜</span>
+                                    <span className="text-2xl font-black text-purple-600">{review.rating_food || '-'}</span>
+                                    <span className="text-xs text-purple-600/70 font-medium">อาหาร</span>
+                                </div>
+                                <div className="flex flex-col items-center p-3 rounded-xl bg-purple-50 border border-purple-100">
+                                    <span className="text-lg mb-1">🌿</span>
+                                    <span className="text-2xl font-black text-purple-600">{review.rating_environment || review.rating_facility}</span>
+                                    <span className="text-xs text-purple-600/70 font-medium">สภาพแวดล้อม</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center p-4 rounded-xl bg-amber-50 border border-amber-100">
+                                <span className="text-lg mb-1">⭐</span>
+                                <span className="text-3xl font-black text-amber-600">{review.rating_overall || review.rating_academic}</span>
+                                <span className="text-xs text-amber-600/70 font-medium">ภาพรวม</span>
+                            </div>
                         </div>
-                        <div className="flex flex-col items-center p-4 rounded-xl bg-pink-50 border border-pink-100">
-                            <Users className="w-6 h-6 text-pink-600 mb-2" />
-                            <span className="text-2xl font-black text-pink-600">{review.rating_social}</span>
-                            <span className="text-xs text-pink-600/70 font-medium">สังคม</span>
+                    ) : (
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="flex flex-col items-center p-4 rounded-xl bg-blue-50 border border-blue-100">
+                                <GraduationCap className="w-6 h-6 text-blue-600 mb-2" />
+                                <span className="text-2xl font-black text-blue-600">{review.rating_academic}</span>
+                                <span className="text-xs text-blue-600/70 font-medium">วิชาการ</span>
+                            </div>
+                            <div className="flex flex-col items-center p-4 rounded-xl bg-pink-50 border border-pink-100">
+                                <Users className="w-6 h-6 text-pink-600 mb-2" />
+                                <span className="text-2xl font-black text-pink-600">{review.rating_social}</span>
+                                <span className="text-xs text-pink-600/70 font-medium">สังคม</span>
+                            </div>
+                            <div className="flex flex-col items-center p-4 rounded-xl bg-green-50 border border-green-100">
+                                <Building2 className="w-6 h-6 text-green-600 mb-2" />
+                                <span className="text-2xl font-black text-green-600">{review.rating_facility}</span>
+                                <span className="text-xs text-green-600/70 font-medium">สถานที่</span>
+                            </div>
                         </div>
-                        <div className="flex flex-col items-center p-4 rounded-xl bg-green-50 border border-green-100">
-                            <Building2 className="w-6 h-6 text-green-600 mb-2" />
-                            <span className="text-2xl font-black text-green-600">{review.rating_facility}</span>
-                            <span className="text-xs text-green-600/70 font-medium">สถานที่</span>
+                    )}
+
+                    {/* Study Review Section */}
+                    {review.review_type === 'study' && (
+                        <div className="space-y-4 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100">
+                            <h4 className="font-bold flex items-center gap-2 text-purple-800">
+                                <BookOpen className="w-5 h-5" />
+                                ข้อมูลการเรียน
+                            </h4>
+
+                            {review.favorite_subjects && (
+                                <div>
+                                    <span className="text-xs text-purple-500 font-semibold uppercase tracking-wider">วิชาที่ชอบ / ที่เด่น</span>
+                                    <p className="text-purple-900 font-medium mt-1">{review.favorite_subjects}</p>
+                                </div>
+                            )}
+
+                            {review.workload_rating && (
+                                <div>
+                                    <span className="text-xs text-purple-500 font-semibold uppercase tracking-wider">ภาระงาน (Workload)</span>
+                                    <div className="flex items-center gap-1 mt-1">
+                                        {[1, 2, 3, 4, 5].map(i => (
+                                            <div key={i} className={`w-8 h-3 rounded-sm ${i <= review.workload_rating! ? 'bg-purple-500' : 'bg-purple-200'}`} />
+                                        ))}
+                                        <span className="text-sm text-purple-700 ml-2 font-bold">{review.workload_rating}/5</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {review.study_tips && (
+                                <div>
+                                    <span className="text-xs text-purple-500 font-semibold uppercase tracking-wider">Tips สำหรับน้อง</span>
+                                    <p className="text-purple-900 mt-1 whitespace-pre-wrap">{review.study_tips}</p>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
 
                     {/* Portfolio/Project Section (Round 1, 2, 4) */}
                     {isPortfolioRound && (

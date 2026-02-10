@@ -99,6 +99,19 @@ export default function GlobalSearch({ className, placeholder = "ค้นหา
         localStorage.setItem('recentSearches', JSON.stringify(updated))
     }
 
+    // Global keyboard shortcut: Ctrl+K / ⌘K
+    useEffect(() => {
+        const handleGlobalKeydown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault()
+                inputRef.current?.focus()
+                setIsOpen(true)
+            }
+        }
+        document.addEventListener('keydown', handleGlobalKeydown)
+        return () => document.removeEventListener('keydown', handleGlobalKeydown)
+    }, [])
+
     // Perform search
     const performSearch = useCallback(async (searchQuery: string) => {
         if (searchQuery.length < 2) {
@@ -275,7 +288,7 @@ export default function GlobalSearch({ className, placeholder = "ค้นหา
                             onKeyDown={handleKeyDown}
                             placeholder={placeholder}
                             autoFocus={autoFocus}
-                            className="flex-1 h-16 text-lg border-0 shadow-none focus-visible:ring-0 bg-transparent px-4"
+                            className="flex-1 h-14 sm:h-16 text-base sm:text-lg border-0 shadow-none focus-visible:ring-0 bg-transparent px-4"
                         />
                         {isLoading && (
                             <Loader2 className="w-5 h-5 text-slate-400 mr-3 animate-spin" />
@@ -293,6 +306,11 @@ export default function GlobalSearch({ className, placeholder = "ค้นหา
                             >
                                 <X className="w-5 h-5" />
                             </Button>
+                        )}
+                        {!query && !isLoading && (
+                            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 mr-3 text-xs text-slate-400 bg-slate-100 border border-slate-200 rounded-md font-mono">
+                                ⌘K
+                            </kbd>
                         )}
                     </div>
                 </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
-import { GraduationCap, ChevronRight, Building2, Star, Search } from 'lucide-react'
+import { GraduationCap, ChevronRight, Building2, Star, Search, PenLine, BookOpenCheck } from 'lucide-react'
 import GlobalSearch from '@/components/GlobalSearch'
 
 interface University {
@@ -145,12 +145,46 @@ export default function Home() {
                 <div className="text-sm text-slate-500 font-medium">หลักสูตร</div>
               </div>
             </div>
+
+            {/* Action Cards - Read or Write Review */}
+            <div className="grid grid-cols-2 gap-4 mt-10 max-w-lg mx-auto">
+              <Link
+                href="/reviews"
+                className="group relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
+              >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex flex-col items-center text-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <BookOpenCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base">อ่านรีวิว</h3>
+                    <p className="text-xs text-white/70 mt-0.5">ดูรีวิวจากรุ่นพี่จริง</p>
+                  </div>
+                </div>
+              </Link>
+              <Link
+                href="/login"
+                className="group relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
+              >
+                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex flex-col items-center text-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <PenLine className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base">เขียนรีวิว</h3>
+                    <p className="text-xs text-white/70 mt-0.5">แชร์ประสบการณ์ของคุณ</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* University List */}
-      <section className="py-12 md:py-20">
+      <section id="universities" className="py-12 md:py-20 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 text-center md:text-left">
             <div>

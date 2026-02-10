@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Star, GraduationCap, Building2, Users, ChevronRight, PenLine, Sparkles, Plus, Minus } from 'lucide-react'
+import { Star, GraduationCap, Building2, Users, ChevronRight, PenLine, Sparkles, Plus, Minus, BookOpen, ClipboardCheck } from 'lucide-react'
 import Link from 'next/link'
 import ReviewFilter from '@/components/ReviewFilter'
 import ReviewCard from '@/components/ReviewCard'
@@ -27,6 +27,7 @@ interface Review {
     rating_facility: number
     comment: string
     created_at: string
+    review_type?: string // 'admission' | 'study'
     admission_round?: number
     admission_year?: number
     project_name?: string
@@ -34,6 +35,16 @@ interface Review {
     gpax?: number
     scores?: Record<string, number>
     achievements?: string
+    study_year?: string
+    favorite_subjects?: string
+    workload_rating?: number
+    study_tips?: string
+    // Study-specific ratings
+    rating_social_friends?: number
+    rating_cost?: number
+    rating_food?: number
+    rating_environment?: number
+    rating_overall?: number
     likes?: number
     dislikes?: number
     profiles?: {
@@ -100,9 +111,10 @@ const ScoreInput = ({
     </div>
 )
 
-// Generate years for dropdown
+// Generate years for dropdown (พ.ศ. 2553 to current+2, descending)
 const currentBuddhistYear = new Date().getFullYear() + 543
-const ADMISSION_YEARS = Array.from({ length: 6 }, (_, i) => currentBuddhistYear - 3 + i)
+const startYear = 2553
+const ADMISSION_YEARS = Array.from({ length: currentBuddhistYear + 2 - startYear + 1 }, (_, i) => currentBuddhistYear + 2 - i)
 
 // Use score types from ScoreTable component
 const SCORE_TYPES = ALL_SCORE_TYPES
@@ -121,6 +133,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
     // Filter states
     const [filterRound, setFilterRound] = useState('all')
     const [filterYear, setFilterYear] = useState('all')
+    const [filterType, setFilterType] = useState('all') // 'all' | 'admission' | 'study'
 
     // Modal states
     const [selectedReview, setSelectedReview] = useState<Review | null>(null)
@@ -129,6 +142,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
     // Form states
     const [formStep, setFormStep] = useState(1)
     const [form, setForm] = useState({
+        review_type: '' as string, // 'admission' | 'study'
         academic: 0,
         social: 0,
         facility: 0,
@@ -139,7 +153,18 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
         portfolio_url: '',
         gpax: '',
         achievements: '',
-        scores: {} as Record<string, number>
+        scores: {} as Record<string, number>,
+        // Study review fields
+        study_year: '',
+        favorite_subjects: '',
+        workload_rating: 0,
+        study_tips: '',
+        // Study-specific ratings
+        social_friends: 0,
+        cost_of_living: 0,
+        food: 0,
+        environment: 0,
+        overall: 0,
     })
     const [selectedScoreTypes, setSelectedScoreTypes] = useState<string[]>(['TGAT', 'A_Math1', 'A_Eng'])
 
@@ -205,12 +230,14 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
     const filteredReviews = reviews.filter(review => {
         const matchRound = filterRound === 'all' || review.admission_round === parseInt(filterRound)
         const matchYear = filterYear === 'all' || review.admission_year === parseInt(filterYear)
-        return matchRound && matchYear
+        const matchType = filterType === 'all' || (review.review_type || 'admission') === filterType
+        return matchRound && matchYear && matchType
     })
 
     const clearFilters = () => {
         setFilterRound('all')
         setFilterYear('all')
+        setFilterType('all')
     }
 
     // Stats calculation
@@ -226,11 +253,19 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
 
     const handleSubmit = async () => {
         if (!user) return router.push('/login')
-        if (form.academic === 0 || form.social === 0 || form.facility === 0) {
+        if (!form.review_type) {
+            alert('กรุณาเลือกประเภทรีวิว')
+            return
+        }
+        if (form.review_type === 'admission' && (form.academic === 0 || form.social === 0 || form.facility === 0)) {
             alert('กรุณาให้คะแนนครบทุกช่อง')
             return
         }
-        if (!form.admission_round || !form.admission_year) {
+        if (form.review_type === 'study' && (form.social_friends === 0 || form.cost_of_living === 0 || form.food === 0 || form.environment === 0 || form.overall === 0)) {
+            alert('กรุณาให้คะแนนครบทุกช่อง')
+            return
+        }
+        if (form.review_type === 'admission' && (!form.admission_round || !form.admission_year)) {
             alert('กรุณาเลือกรอบและปีที่ติด')
             return
         }
@@ -240,25 +275,46 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
         const reviewData: Record<string, unknown> = {
             program_id: id,
             user_id: user.id,
-            rating_academic: form.academic,
-            rating_social: form.social,
-            rating_facility: form.facility,
             comment: form.comment,
-            admission_round: parseInt(form.admission_round),
-            admission_year: parseInt(form.admission_year),
+            review_type: form.review_type,
         }
 
-        // Add round-specific fields
-        // Round 1, 2, 4 = Portfolio/Project based
-        // Round 3 = Admission (score based)
-        const round = parseInt(form.admission_round)
-        if (round === 1 || round === 2 || round === 4) {
-            reviewData.project_name = form.project_name
-            reviewData.portfolio_url = form.portfolio_url
-            reviewData.achievements = form.achievements
-        } else if (round === 3) {
-            reviewData.gpax = form.gpax ? parseFloat(form.gpax) : null
-            reviewData.scores = Object.keys(form.scores).length > 0 ? form.scores : null
+        if (form.review_type === 'admission') {
+            reviewData.rating_academic = form.academic
+            reviewData.rating_social = form.social
+            reviewData.rating_facility = form.facility
+        } else {
+            // For study reviews, map the new ratings to the existing columns + new columns
+            reviewData.rating_academic = form.overall
+            reviewData.rating_social = form.social_friends
+            reviewData.rating_facility = form.environment
+            reviewData.rating_social_friends = form.social_friends
+            reviewData.rating_cost = form.cost_of_living
+            reviewData.rating_food = form.food
+            reviewData.rating_environment = form.environment
+            reviewData.rating_overall = form.overall
+        }
+
+        if (form.review_type === 'admission') {
+            reviewData.admission_round = parseInt(form.admission_round)
+            reviewData.admission_year = parseInt(form.admission_year)
+
+            // Add round-specific fields
+            const round = parseInt(form.admission_round)
+            if (round === 1 || round === 2 || round === 4) {
+                reviewData.project_name = form.project_name
+                reviewData.portfolio_url = form.portfolio_url
+                reviewData.achievements = form.achievements
+            } else if (round === 3) {
+                reviewData.gpax = form.gpax ? parseFloat(form.gpax) : null
+                reviewData.scores = Object.keys(form.scores).length > 0 ? form.scores : null
+            }
+        } else if (form.review_type === 'study') {
+            reviewData.study_year = form.study_year || null
+            reviewData.favorite_subjects = form.favorite_subjects || null
+            reviewData.workload_rating = form.workload_rating || null
+            reviewData.study_tips = form.study_tips || null
+            reviewData.admission_year = form.admission_year ? parseInt(form.admission_year) : null
         }
 
         const { error } = await supabase.from('reviews').insert([reviewData])
@@ -267,9 +323,11 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
             setIsOpen(false)
             setFormStep(1)
             setForm({
-                academic: 0, social: 0, facility: 0, comment: '',
+                review_type: '', academic: 0, social: 0, facility: 0, comment: '',
                 admission_round: '', admission_year: '', project_name: '',
-                portfolio_url: '', gpax: '', achievements: '', scores: {}
+                portfolio_url: '', gpax: '', achievements: '', scores: {},
+                study_year: '', favorite_subjects: '', workload_rating: 0, study_tips: '',
+                social_friends: 0, cost_of_living: 0, food: 0, environment: 0, overall: 0,
             })
             fetchReviews()
         } else {
@@ -406,12 +464,55 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                             <DialogHeader>
                                                 <DialogTitle className="flex items-center gap-2 text-xl">
                                                     <Sparkles className="w-5 h-5 text-amber-500" />
-                                                    เขียนรีวิว - ขั้นตอน {formStep}/3
+                                                    เขียนรีวิว - ขั้นตอน {formStep}/4
                                                 </DialogTitle>
                                             </DialogHeader>
 
-                                            {/* Step 1: Admission Info */}
+                                            {/* Step 1: Choose Review Type */}
                                             {formStep === 1 && (
+                                                <div className="space-y-5 py-4">
+                                                    <p className="text-sm text-slate-500">เลือกประเภทรีวิวที่ต้องการเขียน</p>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setForm({ ...form, review_type: 'admission' }); setFormStep(2) }}
+                                                            className={`group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] ${
+                                                                form.review_type === 'admission'
+                                                                    ? 'border-blue-400 bg-blue-50 shadow-md'
+                                                                    : 'border-slate-200 bg-white hover:border-blue-300'
+                                                            }`}
+                                                        >
+                                                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+                                                                <ClipboardCheck className="w-7 h-7" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <span className="font-bold text-slate-800 block">📝 รีวิวสอบเข้า</span>
+                                                                <span className="text-xs text-slate-500 mt-1 block">TCAS, คะแนน, Portfolio</span>
+                                                            </div>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setForm({ ...form, review_type: 'study' }); setFormStep(2) }}
+                                                            className={`group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] ${
+                                                                form.review_type === 'study'
+                                                                    ? 'border-purple-400 bg-purple-50 shadow-md'
+                                                                    : 'border-slate-200 bg-white hover:border-purple-300'
+                                                            }`}
+                                                        >
+                                                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white shadow-md">
+                                                                <BookOpen className="w-7 h-7" />
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <span className="font-bold text-slate-800 block">📚 รีวิวการเรียน</span>
+                                                                <span className="text-xs text-slate-500 mt-1 block">วิชา, ภาระงาน, บรรยากาศ</span>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 2: Details based on type */}
+                                            {formStep === 2 && form.review_type === 'admission' && (
                                                 <div className="space-y-5 py-4">
                                                     <div className="space-y-3">
                                                         <Label className="text-sm font-semibold">รอบที่ติด *</Label>
@@ -539,31 +640,13 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                                         </div>
                                                     )}
 
-                                                    <Button
-                                                        onClick={() => setFormStep(2)}
-                                                        disabled={!form.admission_round || !form.admission_year}
-                                                        className="w-full"
-                                                    >
-                                                        ถัดไป
-                                                    </Button>
-                                                </div>
-                                            )}
-
-                                            {/* Step 2: Ratings */}
-                                            {formStep === 2 && (
-                                                <div className="space-y-5 py-4">
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                        <StarInput label="📚 วิชาการ" value={form.academic} onChange={(v) => setForm({ ...form, academic: v })} />
-                                                        <StarInput label="👥 สังคม" value={form.social} onChange={(v) => setForm({ ...form, social: v })} />
-                                                        <StarInput label="🏛️ สถานที่" value={form.facility} onChange={(v) => setForm({ ...form, facility: v })} />
-                                                    </div>
                                                     <div className="flex gap-3">
                                                         <Button variant="outline" onClick={() => setFormStep(1)} className="flex-1">
                                                             ย้อนกลับ
                                                         </Button>
                                                         <Button
                                                             onClick={() => setFormStep(3)}
-                                                            disabled={form.academic === 0 || form.social === 0 || form.facility === 0}
+                                                            disabled={!form.admission_round || !form.admission_year}
                                                             className="flex-1"
                                                         >
                                                             ถัดไป
@@ -572,8 +655,148 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                                 </div>
                                             )}
 
-                                            {/* Step 3: Comment */}
+                                            {/* Step 2: Study Review Details */}
+                                            {formStep === 2 && form.review_type === 'study' && (
+                                                <div className="space-y-5 py-4">
+                                                    <div className="space-y-4 p-4 rounded-xl bg-purple-50 border border-purple-100">
+                                                        <h4 className="font-bold text-purple-700">📚 ข้อมูลการเรียน</h4>
+
+                                                        <div className="space-y-3">
+                                                            <Label className="text-sm">ปีที่เข้าเรียน</Label>
+                                                            <Select value={form.admission_year} onValueChange={(v) => setForm({ ...form, admission_year: v })}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="เลือกปี พ.ศ." />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {ADMISSION_YEARS.map(year => (
+                                                                        <SelectItem key={year} value={String(year)}>พ.ศ. {year}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <Label className="text-sm">ชั้นปีที่เรียน</Label>
+                                                            <Select value={form.study_year} onValueChange={(v) => setForm({ ...form, study_year: v })}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="เลือกชั้นปี" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="1">ปี 1</SelectItem>
+                                                                    <SelectItem value="2">ปี 2</SelectItem>
+                                                                    <SelectItem value="3">ปี 3</SelectItem>
+                                                                    <SelectItem value="4">ปี 4</SelectItem>
+                                                                    <SelectItem value="5">ปี 5</SelectItem>
+                                                                    <SelectItem value="6">ปี 6</SelectItem>
+                                                                    <SelectItem value="grad">จบแล้ว</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <Label className="text-sm">วิชาที่ชอบ / ที่เด่น</Label>
+                                                            <Input
+                                                                placeholder="เช่น แคลคูลัส, ฟิสิกส์, โปรแกรมมิ่ง"
+                                                                value={form.favorite_subjects}
+                                                                onChange={(e) => setForm({ ...form, favorite_subjects: e.target.value })}
+                                                            />
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <Label className="text-sm">ภาระงาน (Workload) 1-5</Label>
+                                                            <div className="flex items-center gap-1">
+                                                                {[1, 2, 3, 4, 5].map((level) => (
+                                                                    <button
+                                                                        key={level}
+                                                                        type="button"
+                                                                        onClick={() => setForm({ ...form, workload_rating: level })}
+                                                                        className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                                                                            form.workload_rating >= level
+                                                                                ? 'bg-purple-500 text-white shadow-md'
+                                                                                : 'bg-white text-slate-400 border border-slate-200 hover:border-purple-300'
+                                                                        }`}
+                                                                    >
+                                                                        {level}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex justify-between text-[10px] text-slate-400 px-1">
+                                                                <span>น้อย</span>
+                                                                <span>มาก</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-3">
+                                                            <Label className="text-sm">Tips สำหรับน้อง</Label>
+                                                            <Textarea
+                                                                placeholder="อยากบอกอะไรน้องๆ ที่จะมาเรียน..."
+                                                                rows={3}
+                                                                value={form.study_tips}
+                                                                onChange={(e) => setForm({ ...form, study_tips: e.target.value })}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex gap-3">
+                                                        <Button variant="outline" onClick={() => setFormStep(1)} className="flex-1">
+                                                            ย้อนกลับ
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => setFormStep(3)}
+                                                            className="flex-1"
+                                                        >
+                                                            ถัดไป
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 3: Ratings */}
                                             {formStep === 3 && (
+                                                <div className="space-y-5 py-4">
+                                                    {form.review_type === 'admission' ? (
+                                                        /* Admission ratings */
+                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                            <StarInput label="📚 วิชาการ" value={form.academic} onChange={(v) => setForm({ ...form, academic: v })} />
+                                                            <StarInput label="👥 สังคม" value={form.social} onChange={(v) => setForm({ ...form, social: v })} />
+                                                            <StarInput label="🏛️ สถานที่" value={form.facility} onChange={(v) => setForm({ ...form, facility: v })} />
+                                                        </div>
+                                                    ) : (
+                                                        /* Study ratings */
+                                                        <div className="space-y-4">
+                                                            <p className="text-sm text-purple-600 font-semibold">📚 ให้คะแนนประสบการณ์การเรียน</p>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <StarInput label="👫 สังคม / เพื่อน" value={form.social_friends} onChange={(v) => setForm({ ...form, social_friends: v })} />
+                                                                <StarInput label="💰 ค่าครองชีพ" value={form.cost_of_living} onChange={(v) => setForm({ ...form, cost_of_living: v })} />
+                                                                <StarInput label="🍜 อาหาร" value={form.food} onChange={(v) => setForm({ ...form, food: v })} />
+                                                                <StarInput label="🌿 สภาพแวดล้อม" value={form.environment} onChange={(v) => setForm({ ...form, environment: v })} />
+                                                            </div>
+                                                            <div className="pt-2 border-t border-purple-100">
+                                                                <StarInput label="⭐ ภาพรวม" value={form.overall} onChange={(v) => setForm({ ...form, overall: v })} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex gap-3">
+                                                        <Button variant="outline" onClick={() => setFormStep(2)} className="flex-1">
+                                                            ย้อนกลับ
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => setFormStep(4)}
+                                                            disabled={
+                                                                form.review_type === 'admission'
+                                                                    ? (form.academic === 0 || form.social === 0 || form.facility === 0)
+                                                                    : (form.social_friends === 0 || form.cost_of_living === 0 || form.food === 0 || form.environment === 0 || form.overall === 0)
+                                                            }
+                                                            className="flex-1"
+                                                        >
+                                                            ถัดไป
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 4: Comment */}
+                                            {formStep === 4 && (
                                                 <div className="space-y-5 py-4">
                                                     <div>
                                                         <Label className="text-sm font-semibold text-slate-700 block mb-2">💬 ความคิดเห็น</Label>
@@ -586,7 +809,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                                         />
                                                     </div>
                                                     <div className="flex gap-3">
-                                                        <Button variant="outline" onClick={() => setFormStep(2)} className="flex-1">
+                                                        <Button variant="outline" onClick={() => setFormStep(3)} className="flex-1">
                                                             ย้อนกลับ
                                                         </Button>
                                                         <Button
@@ -626,8 +849,10 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                 <ReviewFilter
                                     selectedRound={filterRound}
                                     selectedYear={filterYear}
+                                    selectedType={filterType}
                                     onRoundChange={setFilterRound}
                                     onYearChange={setFilterYear}
+                                    onTypeChange={setFilterType}
                                     onClear={clearFilters}
                                     totalCount={reviews.length}
                                     filteredCount={filteredReviews.length}
