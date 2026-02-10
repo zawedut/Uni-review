@@ -164,7 +164,7 @@ export default function Home() {
                 </div>
               </Link>
               <Link
-                href="/login"
+                href="/write"
                 className="group relative overflow-hidden rounded-2xl p-5 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />

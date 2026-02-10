@@ -81,7 +81,7 @@ export default function Navbar() {
                         </Link>
 
                         {/* Write Review */}
-                        <Link href="/login">
+                        <Link href="/write">
                             <Button variant="ghost" size="sm" className="text-gray-600 gap-1.5">
                                 <PenLine className="w-4 h-4" />
                                 เขียนรีวิว
@@ -168,7 +168,7 @@ export default function Navbar() {
                         </Link>
 
                         <Link
-                            href="/login"
+                            href="/write"
                             className="flex items-center gap-3 px-3 py-3 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
                             onClick={() => setMobileMenuOpen(false)}
                         >

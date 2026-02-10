@@ -126,7 +126,6 @@ export default function ReviewsFeedPage() {
                 workload_rating, study_tips, likes, dislikes,
                 rating_social_friends, rating_cost, rating_food,
                 rating_environment, rating_overall,
-                profiles ( full_name, email ),
                 programs (
                     id, name_th,
                     departments (
