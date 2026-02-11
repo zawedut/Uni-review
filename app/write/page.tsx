@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { GraduationCap, Building2, BookOpen, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { GraduationCap, Building2, BookOpen, ChevronRight } from 'lucide-react'
 
 export default function WriteReviewPage() {
     const router = useRouter()
@@ -72,8 +72,6 @@ export default function WriteReviewPage() {
 
         const fetchPrograms = async () => {
             setLoadingPrograms(true)
-            // Programs are linked to Departments, which are linked to Faculties
-            // We need to fetch programs where department -> faculty_id = selectedFaculty
             const { data } = await supabase
                 .from('programs')
                 .select(`
@@ -123,15 +121,23 @@ export default function WriteReviewPage() {
                                 มหาวิทยาลัย
                             </label>
                             <Select value={selectedUni} onValueChange={setSelectedUni}>
-                                <SelectTrigger className="h-12 bg-white border-slate-200 focus:ring-blue-500">
-                                    <div className="flex items-center gap-3">
-                                        <Building2 className="w-4 h-4 text-slate-400" />
-                                        <SelectValue placeholder="เลือกมหาวิทยาลัย" />
+                                <SelectTrigger className="h-12 w-full bg-white border-slate-200 focus:ring-blue-500">
+                                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                                        <Building2 className="w-4 h-4 text-slate-400 shrink-0" />
+                                        <span className="truncate text-left flex-1 pr-2">
+                                            <SelectValue placeholder="เลือกมหาวิทยาลัย" />
+                                        </span>
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-[300px]">
                                     {universities.map(uni => (
-                                        <SelectItem key={uni.id} value={uni.id}>{uni.name_th}</SelectItem>
+                                        <SelectItem 
+                                            key={uni.id} 
+                                            value={uni.id}
+                                            className="whitespace-normal break-words py-2 text-left"
+                                        >
+                                            {uni.name_th}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -144,15 +150,23 @@ export default function WriteReviewPage() {
                                 คณะ
                             </label>
                             <Select value={selectedFaculty} onValueChange={setSelectedFaculty} disabled={!selectedUni}>
-                                <SelectTrigger className="h-12 bg-white border-slate-200 focus:ring-blue-500">
-                                    <div className="flex items-center gap-3">
-                                        <GraduationCap className="w-4 h-4 text-slate-400" />
-                                        <SelectValue placeholder={loadingFaculties ? "กำลังโหลด..." : "เลือกคณะ"} />
+                                <SelectTrigger className="h-12 w-full bg-white border-slate-200 focus:ring-blue-500">
+                                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                                        <GraduationCap className="w-4 h-4 text-slate-400 shrink-0" />
+                                        <span className="truncate text-left flex-1 pr-2">
+                                            <SelectValue placeholder={loadingFaculties ? "กำลังโหลด..." : "เลือกคณะ"} />
+                                        </span>
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-[300px]">
                                     {faculties.map(fac => (
-                                        <SelectItem key={fac.id} value={fac.id}>{fac.name_th}</SelectItem>
+                                        <SelectItem 
+                                            key={fac.id} 
+                                            value={fac.id}
+                                            className="whitespace-normal break-words py-2 text-left"
+                                        >
+                                            {fac.name_th}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -165,15 +179,23 @@ export default function WriteReviewPage() {
                                 สาขาวิชา / หลักสูตร
                             </label>
                             <Select value={selectedProgram} onValueChange={setSelectedProgram} disabled={!selectedFaculty}>
-                                <SelectTrigger className="h-12 bg-white border-slate-200 focus:ring-blue-500">
-                                    <div className="flex items-center gap-3">
-                                        <BookOpen className="w-4 h-4 text-slate-400" />
-                                        <SelectValue placeholder={loadingPrograms ? "กำลังโหลด..." : "เลือกสาขา"} />
+                                <SelectTrigger className="h-12 w-full bg-white border-slate-200 focus:ring-blue-500">
+                                    <div className="flex items-center gap-3 w-full overflow-hidden">
+                                        <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
+                                        <span className="truncate text-left flex-1 pr-2">
+                                            <SelectValue placeholder={loadingPrograms ? "กำลังโหลด..." : "เลือกสาขา"} />
+                                        </span>
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-[300px]">
                                     {programs.map(prog => (
-                                        <SelectItem key={prog.id} value={prog.id}>{prog.name_th}</SelectItem>
+                                        <SelectItem 
+                                            key={prog.id} 
+                                            value={prog.id}
+                                            className="whitespace-normal break-words py-2 text-left leading-tight"
+                                        >
+                                            {prog.name_th}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
