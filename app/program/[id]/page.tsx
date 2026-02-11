@@ -836,7 +836,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                         </div>
 
                         {/* Reviews */}
-                        <div className="lg:col-span-2">
+                        <div className="lg:col-span-2 relative">
                             <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                                 💬 รีวิวทั้งหมด
                                 {reviews.length > 0 && (
@@ -844,19 +844,21 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                 )}
                             </h2>
 
-                            {/* Filter Bar */}
+                            {/* Sticky Filter Bar with Backdrop Blur */}
                             {reviews.length > 0 && (
-                                <ReviewFilter
-                                    selectedRound={filterRound}
-                                    selectedYear={filterYear}
-                                    selectedType={filterType}
-                                    onRoundChange={setFilterRound}
-                                    onYearChange={setFilterYear}
-                                    onTypeChange={setFilterType}
-                                    onClear={clearFilters}
-                                    totalCount={reviews.length}
-                                    filteredCount={filteredReviews.length}
-                                />
+                                <div className="sticky top-16 z-20 bg-slate-50/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 md:rounded-xl md:mb-4 border-b border-slate-200/50 md:border-0 transition-all">
+                                    <ReviewFilter
+                                        selectedRound={filterRound}
+                                        selectedYear={filterYear}
+                                        selectedType={filterType}
+                                        onRoundChange={setFilterRound}
+                                        onYearChange={setFilterYear}
+                                        onTypeChange={setFilterType}
+                                        onClear={clearFilters}
+                                        totalCount={reviews.length}
+                                        filteredCount={filteredReviews.length}
+                                    />
+                                </div>
                             )}
 
                             {reviews.length === 0 ? (
