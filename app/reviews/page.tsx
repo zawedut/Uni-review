@@ -20,35 +20,56 @@ import {
     MessageSquareText,
     ChevronRight,
     Loader2,
+    Link as LinkIcon,
+    FileText,
+    Utensils,
+    Wallet,
+    Trees
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
-// Types
+// Types: Updated to match DB Schema
 interface ReviewWithContext {
     id: string
     user_id: string
     program_id: string
+    // Ratings
     rating_academic: number
     rating_social: number
     rating_facility: number
-    comment: string
-    created_at: string
-    review_type?: string
-    admission_round?: number
-    admission_year?: number
-    project_name?: string
-    study_year?: string
-    favorite_subjects?: string
-    workload_rating?: number
-    study_tips?: string
+    rating_total?: number // GENERATED ALWAYS column
     rating_social_friends?: number
     rating_cost?: number
     rating_food?: number
     rating_environment?: number
     rating_overall?: number
-    likes?: number
+
+    // Content
+    comment: string
+    created_at: string
+    review_type: 'admission' | 'study' // Default is 'admission'
+
+    // Admission Specific
+    admission_round?: number
+    admission_year?: number
+    project_name?: string
+    portfolio_url?: string
+    gpax?: number
+    scores?: Record<string, number | string> // jsonb
+    achievements?: string
+
+    // Study Specific
+    study_year?: string
+    favorite_subjects?: string
+    workload_rating?: number
+    study_tips?: string
+
+    // Engagement
+    likes?: number // Note: Not in create table, assuming derived or separate table
     dislikes?: number
+
+    // Joins
     profiles?: {
         full_name?: string
         email?: string
@@ -108,25 +129,25 @@ export default function ReviewsFeedPage() {
             if (data) setUniversities(data)
         }
         fetchUniversities()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [supabase])
 
     // Fetch reviews
     const fetchReviews = useCallback(async (offset = 0, append = false) => {
         if (offset === 0) setLoading(true)
         else setLoadingMore(true)
 
+        // Updated query to include all new columns from DB
         let query = supabase
             .from('reviews')
             .select(`
                 id, user_id, program_id,
-                rating_academic, rating_social, rating_facility,
+                rating_academic, rating_social, rating_facility, rating_total,
                 comment, created_at, review_type,
-                admission_round, admission_year,
-                project_name, study_year, favorite_subjects,
-                workload_rating, study_tips, likes, dislikes,
-                rating_social_friends, rating_cost, rating_food,
-                rating_environment, rating_overall,
+                admission_round, admission_year, project_name, 
+                portfolio_url, gpax, scores, achievements,
+                study_year, favorite_subjects, workload_rating, study_tips, 
+                rating_social_friends, rating_cost, rating_food, rating_environment, rating_overall,
+                likes, dislikes,
                 programs (
                     id, name_th,
                     departments (
@@ -137,18 +158,14 @@ export default function ReviewsFeedPage() {
                         )
                     )
                 )
-
             `)
-
-        // Debug log
-        console.log('Fetching reviews with query:', query)
-
 
         // Sort
         if (sortBy === 'latest') {
             query = query.order('created_at', { ascending: false })
         } else {
-            query = query.order('rating_academic', { ascending: false })
+            // Use generated column for sorting if available
+            query = query.order('rating_total', { ascending: false })
         }
 
         // Pagination
@@ -163,14 +180,10 @@ export default function ReviewsFeedPage() {
             return
         }
 
-        console.log('Fetched raw data:', data)
-
-
-
         if (data) {
-            // Client-side filter for university (since it's nested)
             let filtered = data as unknown as ReviewWithContext[]
 
+            // Client-side filter for university
             if (filterUni !== 'all') {
                 filtered = filtered.filter(r => {
                     const uniId = r.programs?.departments?.faculties?.universities?.id
@@ -178,6 +191,7 @@ export default function ReviewsFeedPage() {
                 })
             }
 
+            // Filter Type
             if (filterType !== 'all') {
                 filtered = filtered.filter(r => (r.review_type || 'admission') === filterType)
             }
@@ -202,10 +216,17 @@ export default function ReviewsFeedPage() {
         fetchReviews(reviews.length, true)
     }
 
-    const avgRating = (r: ReviewWithContext) =>
-        r.review_type === 'study' && r.rating_overall
-            ? r.rating_overall.toFixed(1)
-            : ((r.rating_academic + r.rating_social + r.rating_facility) / 3).toFixed(1)
+    // Logic for displaying the "Big Score"
+    const getDisplayRating = (r: ReviewWithContext) => {
+        if (r.review_type === 'study' && r.rating_overall) {
+            return r.rating_overall.toFixed(1)
+        }
+        // Use DB generated column 'rating_total' if available, otherwise calculate manually
+        if (r.rating_total) {
+            return Number(r.rating_total).toFixed(1)
+        }
+        return ((r.rating_academic + r.rating_social + r.rating_facility) / 3).toFixed(1)
+    }
 
     const getUniName = (r: ReviewWithContext) =>
         r.programs?.departments?.faculties?.universities?.name_th || ''
@@ -231,7 +252,7 @@ export default function ReviewsFeedPage() {
                     <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-2">
                         เสียงจากรุ่นพี่
                     </h1>
-                    <p className="text-slate-500">รีวิวล่าสุดจากนักศึกษาจริงทุกมหาวิทยาลัย</p>
+                    <p className="text-slate-500">รีวิวการสอบเข้าและการเรียนจริง</p>
                 </div>
 
                 {/* Error Banner */}
@@ -239,20 +260,8 @@ export default function ReviewsFeedPage() {
                     <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 text-center">
                         <p className="font-bold">เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
                         <p className="text-sm">{fetchError}</p>
-                        <p className="text-xs mt-2 text-red-400">Please capture this screen and send to developer.</p>
                     </div>
-
                 )}
-
-                {/* DEBUG SECTION */}
-                <div className="bg-slate-100 p-4 rounded-lg mb-8 text-xs font-mono text-slate-600 border border-slate-200">
-                    <p><strong>Debug Info:</strong></p>
-                    <p>Loading: {loading ? 'Yes' : 'No'}</p>
-                    <p>Reviews Count: {reviews.length}</p>
-                    <p>Has Error: {fetchError || 'No'}</p>
-                    <p>Filter Uni: {filterUni}</p>
-                    <p>Filter Type: {filterType}</p>
-                </div>
 
                 {/* Filters */}
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-lg p-4 mb-8 sm:sticky sm:top-20 z-20">
@@ -295,8 +304,8 @@ export default function ReviewsFeedPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">ทุกประเภท</SelectItem>
-                                <SelectItem value="admission">📝 สอบเข้า</SelectItem>
-                                <SelectItem value="study">📚 การเรียน</SelectItem>
+                                <SelectItem value="admission">📝 รีวิวสอบเข้า</SelectItem>
+                                <SelectItem value="study">📚 รีวิวการเรียน</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -341,119 +350,191 @@ export default function ReviewsFeedPage() {
                                         )} />
 
                                         <div className="p-5 sm:p-6">
-                                            {/* Context: Uni > Faculty > Program */}
-                                            <Link
-                                                href={`/program/${review.program_id}`}
-                                                className="group flex items-center gap-2 text-xs text-slate-400 mb-3 hover:text-blue-500 transition-colors"
-                                            >
-                                                <span className="font-medium truncate">{getUniName(review)}</span>
-                                                <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
-                                                <span className="truncate">{getFacultyName(review)}</span>
-                                                <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
-                                                <span className="font-semibold text-slate-500 group-hover:text-blue-600 truncate">{getProgramName(review)}</span>
-                                            </Link>
+                                            {/* Header Context */}
+                                            <div className="flex justify-between items-start mb-3">
+                                                <Link
+                                                    href={`/program/${review.program_id}`}
+                                                    className="group flex flex-wrap items-center gap-1.5 text-xs text-slate-500 hover:text-blue-500 transition-colors max-w-[80%]"
+                                                >
+                                                    <span className="font-semibold">{getUniName(review)}</span>
+                                                    <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
+                                                    <span className="truncate">{getFacultyName(review)}</span>
+                                                    <ChevronRight className="w-3 h-3 shrink-0 opacity-50" />
+                                                    <span className="font-bold text-slate-700 group-hover:text-blue-600">{getProgramName(review)}</span>
+                                                </Link>
 
-                                            {/* Badges */}
+                                                {/* Rating Badge (Top Right) */}
+                                                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                                                    <span className="text-sm font-bold">{getDisplayRating(review)}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Badges Row */}
                                             <div className="flex flex-wrap items-center gap-2 mb-4">
                                                 {study ? (
-                                                    <Badge className="bg-purple-100 text-purple-700 border-purple-200 border gap-1 text-xs">
+                                                    <Badge className="bg-purple-100 text-purple-700 border-purple-200 border gap-1 text-xs font-medium hover:bg-purple-200">
                                                         <BookOpen className="w-3 h-3" />
-                                                        📚 รีวิวการเรียน
+                                                        รีวิวการเรียน
                                                     </Badge>
                                                 ) : round ? (
-                                                    <Badge className={cn(round.color, "border gap-1 text-xs")}>
+                                                    <Badge className={cn(round.color, "border gap-1 text-xs font-medium")}>
                                                         {round.icon}
                                                         รอบ {review.admission_round}
                                                     </Badge>
                                                 ) : null}
+
                                                 {review.admission_year && (
-                                                    <Badge variant="outline" className="text-xs border-slate-200 gap-1">
+                                                    <Badge variant="outline" className="text-xs border-slate-200 gap-1 text-slate-500">
                                                         <Calendar className="w-3 h-3" />
-                                                        {review.admission_year}
+                                                        DEK{review.admission_year.toString().slice(-2)}
                                                     </Badge>
                                                 )}
+
                                                 {study && review.study_year && (
                                                     <Badge variant="outline" className="text-xs border-purple-200 text-purple-600 gap-1">
-                                                        ชั้นปี {review.study_year === 'grad' ? 'จบแล้ว' : review.study_year}
+                                                        ปี {review.study_year === 'grad' ? 'จบแล้ว' : review.study_year}
                                                     </Badge>
                                                 )}
-                                                <div className="ml-auto flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-600">
-                                                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                                    <span className="text-sm font-bold">{avgRating(review)}</span>
-                                                </div>
+
+                                                {/* Admission Specific Badges */}
+                                                {!study && review.gpax && (
+                                                    <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600 border-slate-200 gap-1">
+                                                        GPAX {Number(review.gpax).toFixed(2)}
+                                                    </Badge>
+                                                )}
                                             </div>
 
-                                            {/* ★ THE REVIEW COMMENT — emphasized */}
+                                            {/* Scores & Project Name (Admission Only) */}
+                                            {!study && (
+                                                <div className="mb-4 space-y-2">
+                                                    {review.project_name && (
+                                                        <div className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-md inline-block">
+                                                            โครงการ: {review.project_name}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Scores Grid */}
+                                                    {review.scores && Object.keys(review.scores).length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {Object.entries(review.scores).map(([subject, score]) => (
+                                                                <div key={subject} className="px-2 py-1 rounded border border-slate-200 bg-slate-50 text-xs text-slate-600">
+                                                                    <span className="font-bold mr-1">{subject}:</span>
+                                                                    {score}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* COMMENT AREA */}
                                             {review.comment && (
-                                                <div className="relative mb-4">
-                                                    <div className="absolute -left-1 top-0 bottom-0 w-1 rounded-full bg-gradient-to-b from-blue-400 to-purple-400" />
-                                                    <blockquote className="pl-5 text-slate-700 text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
-                                                        &ldquo;{review.comment}&rdquo;
+                                                <div className="relative mb-5">
+                                                    <div className="absolute -left-1 top-1 bottom-1 w-1 rounded-full bg-gradient-to-b from-blue-400 to-purple-400 opacity-50" />
+                                                    <blockquote className="pl-5 text-slate-700 text-base leading-relaxed whitespace-pre-wrap">
+                                                        {review.comment}
                                                     </blockquote>
                                                 </div>
                                             )}
 
-                                            {/* Study review extras */}
-                                            {study && (review.favorite_subjects || review.workload_rating || review.study_tips) && (
-                                                <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 mb-4 space-y-2">
-                                                    {review.favorite_subjects && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-purple-500 font-semibold shrink-0">วิชาเด่น:</span>
-                                                            <span className="text-sm text-purple-800">{review.favorite_subjects}</span>
-                                                        </div>
-                                                    )}
-                                                    {review.workload_rating && (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-purple-500 font-semibold shrink-0">ภาระงาน:</span>
-                                                            <div className="flex gap-0.5">
-                                                                {[1, 2, 3, 4, 5].map(i => (
-                                                                    <div key={i} className={cn("w-5 h-2.5 rounded-sm", i <= review.workload_rating! ? 'bg-purple-500' : 'bg-purple-200')} />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    {review.study_tips && (
-                                                        <div>
-                                                            <span className="text-xs text-purple-500 font-semibold">Tips:</span>
-                                                            <p className="text-sm text-purple-800 mt-0.5">{review.study_tips}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Rating Breakdown + User info */}
-                                            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                                                {study ? (
-                                                    <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
-                                                        <span className="flex items-center gap-1">👫 {review.rating_social_friends || review.rating_social}</span>
-                                                        <span className="flex items-center gap-1">💰 {review.rating_cost || '-'}</span>
-                                                        <span className="flex items-center gap-1">🍜 {review.rating_food || '-'}</span>
-                                                        <span className="flex items-center gap-1">🌿 {review.rating_environment || review.rating_facility}</span>
-                                                        <span className="flex items-center gap-1 text-amber-500 font-semibold">⭐ {review.rating_overall || review.rating_academic}</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                                                        <span className="flex items-center gap-1">
-                                                            <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
-                                                            {review.rating_academic}
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Users className="w-3.5 h-3.5 text-pink-400" />
-                                                            {review.rating_social}
-                                                        </span>
-                                                        <span className="flex items-center gap-1">
-                                                            <Building2 className="w-3.5 h-3.5 text-green-400" />
-                                                            {review.rating_facility}
-                                                        </span>
+                                            {/* EXTRA CONTENT SECTIONS */}
+                                            <div className="space-y-3">
+                                                {/* Admission Extras */}
+                                                {!study && review.achievements && (
+                                                    <div className="text-sm bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                                        <p className="font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                                                            <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                                                            ผลงานโดดเด่น:
+                                                        </p>
+                                                        <p className="text-slate-600">{review.achievements}</p>
                                                     </div>
                                                 )}
 
-                                                <div className="flex items-center gap-2 text-xs text-slate-400">
-                                                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold", study ? "bg-gradient-to-br from-purple-500 to-pink-500" : "bg-gradient-to-br from-blue-500 to-purple-600")}>
+                                                {!study && review.portfolio_url && (
+                                                    <a
+                                                        href={review.portfolio_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 p-3 rounded-lg border border-blue-200 bg-blue-50/50 text-blue-600 hover:bg-blue-100 transition-colors group"
+                                                    >
+                                                        <LinkIcon className="w-4 h-4" />
+                                                        <span className="text-sm font-semibold">ดูตัวอย่างพอร์ตฟอลิโอ</span>
+                                                        <ChevronRight className="w-4 h-4 ml-auto opacity-50 group-hover:translate-x-1 transition-transform" />
+                                                    </a>
+                                                )}
+
+                                                {/* Study Extras */}
+                                                {study && (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {review.favorite_subjects && (
+                                                            <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                                                                <span className="text-xs text-purple-600 font-bold block mb-1">วิชาที่ชอบ</span>
+                                                                <span className="text-sm text-purple-900">{review.favorite_subjects}</span>
+                                                            </div>
+                                                        )}
+                                                        {review.study_tips && (
+                                                            <div className="bg-green-50 p-3 rounded-lg border border-green-100 sm:col-span-2">
+                                                                <span className="text-xs text-green-600 font-bold block mb-1">เคล็ดลับการเรียน</span>
+                                                                <span className="text-sm text-green-900">{review.study_tips}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* FOOTER: Detailed Ratings & User Info */}
+                                            <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                {/* Detailed Ratings */}
+                                                {study ? (
+                                                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                                        <div className="flex items-center gap-1" title="สังคมเพื่อน">
+                                                            <Users className="w-3.5 h-3.5 text-pink-400" />
+                                                            <span>{review.rating_social_friends || review.rating_social}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="ค่าใช้จ่าย">
+                                                            <Wallet className="w-3.5 h-3.5 text-green-500" />
+                                                            <span>{review.rating_cost || '-'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="อาหาร">
+                                                            <Utensils className="w-3.5 h-3.5 text-orange-400" />
+                                                            <span>{review.rating_food || '-'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="สภาพแวดล้อม">
+                                                            <Trees className="w-3.5 h-3.5 text-emerald-500" />
+                                                            <span>{review.rating_environment || review.rating_facility}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="ภาระงาน">
+                                                            <FileText className="w-3.5 h-3.5 text-blue-400" />
+                                                            <span>{review.workload_rating ? `${review.workload_rating}/5` : '-'}</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                        <div className="flex items-center gap-1" title="วิชาการ">
+                                                            <GraduationCap className="w-3.5 h-3.5 text-blue-500" />
+                                                            <span>{review.rating_academic}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="สังคม">
+                                                            <Users className="w-3.5 h-3.5 text-pink-500" />
+                                                            <span>{review.rating_social}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1" title="อุปกรณ์/สถานที่">
+                                                            <Building2 className="w-3.5 h-3.5 text-emerald-500" />
+                                                            <span>{review.rating_facility}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Author & Date */}
+                                                <div className="flex items-center gap-2 text-xs text-slate-400 ml-auto">
+                                                    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-sm",
+                                                        study ? "bg-gradient-to-br from-purple-500 to-pink-500" : "bg-gradient-to-br from-blue-500 to-purple-600"
+                                                    )}>
                                                         {(review.profiles?.full_name || 'U').charAt(0).toUpperCase()}
                                                     </div>
-                                                    <span className="hidden sm:inline">{review.profiles?.full_name || 'ผู้ใช้งาน'}</span>
-                                                    <span>·</span>
+                                                    <span className="font-medium text-slate-500">{review.profiles?.full_name || 'ผู้ใช้งาน'}</span>
+                                                    <span>•</span>
                                                     <span>{new Date(review.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
                                                 </div>
                                             </div>
@@ -463,7 +544,7 @@ export default function ReviewsFeedPage() {
                             )
                         })}
 
-                        {/* Load More */}
+                        {/* Load More Button */}
                         {hasMore && (
                             <div className="text-center pt-4 pb-8">
                                 <Button
@@ -471,7 +552,7 @@ export default function ReviewsFeedPage() {
                                     size="lg"
                                     onClick={loadMore}
                                     disabled={loadingMore}
-                                    className="rounded-full px-8 border-slate-300 hover:border-blue-400 hover:text-blue-600"
+                                    className="rounded-full px-8 border-slate-300 hover:border-blue-400 hover:text-blue-600 bg-white"
                                 >
                                     {loadingMore ? (
                                         <>
