@@ -844,9 +844,9 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                 )}
                             </h2>
 
-                            {/* Sticky Filter Bar with Backdrop Blur */}
+                            {/* Filter Bar - CHANGED FROM STICKY TO RELATIVE */}
                             {reviews.length > 0 && (
-                                <div className="sticky top-16 z-20 bg-slate-50/80 backdrop-blur-md py-3 -mx-4 px-4 md:mx-0 md:px-0 md:rounded-xl md:mb-4 border-b border-slate-200/50 md:border-0 transition-all">
+                                <div className="relative z-10 mb-6">
                                     <ReviewFilter
                                         selectedRound={filterRound}
                                         selectedYear={filterYear}
