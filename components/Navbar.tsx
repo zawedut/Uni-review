@@ -54,9 +54,6 @@ export default function Navbar() {
                 <div className="h-16 flex justify-between items-center">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2.5 group">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-                            <GraduationCap className="w-5 h-5 text-white" />
-                        </div>
                         <span className="text-lg font-bold text-gray-900">Buddy Review</span>
                     </Link>
 
