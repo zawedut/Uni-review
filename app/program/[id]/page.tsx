@@ -2,10 +2,11 @@
 
 import { useEffect, useState, use, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -170,6 +171,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
 
     const supabase = createClient()
     const router = useRouter()
+    const searchParams = useSearchParams()
 
     const fetchReviews = useCallback(async () => {
         const { data: reviewsData, error } = await supabase
@@ -225,6 +227,22 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
         }
         init()
     }, [id, supabase, fetchReviews])
+
+    // Auto-open review dialog when returning from login with ?action=review
+    useEffect(() => {
+        if (searchParams.get('action') === 'review' && user) {
+            setIsOpen(true)
+        }
+    }, [searchParams, user])
+
+    // Login gate: check auth before opening review dialog
+    const handleOpenReview = () => {
+        if (!user) {
+            router.push(`/login?redirectTo=${encodeURIComponent(`/program/${id}?action=review`)}`)
+            return
+        }
+        setIsOpen(true)
+    }
 
     // Filter reviews
     const filteredReviews = reviews.filter(review => {
@@ -453,13 +471,14 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                     </div>
 
                                     {/* Write Review Button */}
+                                    <Button
+                                        onClick={handleOpenReview}
+                                        className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200 mb-4"
+                                    >
+                                        <PenLine className="w-5 h-5 mr-2" />
+                                        เขียนรีวิว
+                                    </Button>
                                     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setFormStep(1) }}>
-                                        <DialogTrigger asChild>
-                                            <Button className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200">
-                                                <PenLine className="w-5 h-5 mr-2" />
-                                                เขียนรีวิว
-                                            </Button>
-                                        </DialogTrigger>
                                         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                                             <DialogHeader>
                                                 <DialogTitle className="flex items-center gap-2 text-xl">
@@ -869,7 +888,7 @@ export default function ProgramReviewPage({ params }: { params: Promise<{ id: st
                                         </div>
                                         <p className="text-slate-500 mb-6 text-lg">ยังไม่มีรีวิว เป็นคนแรกที่แชร์ประสบการณ์!</p>
                                         <Button
-                                            onClick={() => setIsOpen(true)}
+                                            onClick={handleOpenReview}
                                             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                                         >
                                             ✍️ เขียนรีวิวแรก

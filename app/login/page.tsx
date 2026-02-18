@@ -1,20 +1,30 @@
 'use client'
 
+import { Suspense } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { GraduationCap, ArrowLeft } from 'lucide-react'
 import { FcGoogle } from 'react-icons/fc'
 import Link from 'next/link'
 
-export default function LoginPage() {
+function LoginContent() {
+    const searchParams = useSearchParams()
+    const redirectTo = searchParams.get('redirectTo')
+
     const handleGoogleLogin = async () => {
         const supabase = createClient()
+
+        // Build callback URL with optional redirect-back path
+        const callbackUrl = redirectTo
+            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
+            : `${window.location.origin}/auth/callback`
 
         await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
+                redirectTo: callbackUrl,
                 queryParams: {
                     access_type: 'offline',
                     prompt: 'consent',
@@ -56,5 +66,17 @@ export default function LoginPage() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="animate-pulse text-slate-400">กำลังโหลด...</div>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     )
 }

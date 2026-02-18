@@ -24,8 +24,22 @@ export default function WriteReviewPage() {
     const [loadingFaculties, setLoadingFaculties] = useState(false)
     const [loadingPrograms, setLoadingPrograms] = useState(false)
 
-    // Fetch Universities on mount
+    // Auth guard: redirect to login if not logged in
     useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                router.push('/login?redirectTo=/write')
+                return
+            }
+            setLoading(false)
+        }
+        checkAuth()
+    }, [supabase, router])
+
+    // Fetch Universities after auth check passes
+    useEffect(() => {
+        if (loading) return
         const fetchUniversities = async () => {
             const { data } = await supabase
                 .from('universities')
@@ -33,10 +47,9 @@ export default function WriteReviewPage() {
                 .order('name_th')
             
             if (data) setUniversities(data)
-            setLoading(false)
         }
         fetchUniversities()
-    }, [supabase])
+    }, [loading, supabase])
 
     // Fetch Faculties when Uni changes
     useEffect(() => {
